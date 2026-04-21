@@ -147,8 +147,6 @@ TryBuildMTURow(_In_ IRP *Irp, _Out_ MIB_IPINTERFACE_ROW *Row)
     return TRUE;
 }
 
-#pragma prefast(push)
-#pragma prefast(disable : cpp/drivers/invalid-function-class-typedef) /* It's fine to make this paged because it's only ever called from userspace. */
 static DRIVER_DISPATCH_PAGED FilterDispatch;
 _Use_decl_annotations_
 static NTSTATUS
@@ -173,7 +171,6 @@ FilterDispatch(DEVICE_OBJECT *DeviceObject, IRP *Irp)
     ExReleaseRundownProtection(&FilterRundown);
     return Status;
 }
-#pragma prefast(pop)
 
 static NTSTATUS
 Attach(VOID)
@@ -236,8 +233,6 @@ Detach(VOID)
 #ifdef ALLOC_PRAGMA
 #    pragma alloc_text(INIT, NsiDriverEntry)
 #endif
-#pragma prefast(push)
-#pragma prefast(disable : cpp/drivers/illegal-field-access-2) /* This is a driver entry routine; we've just split them up. */
 _Use_decl_annotations_
 VOID
 NsiDriverEntry(DRIVER_OBJECT *DriverObject)
@@ -252,7 +247,6 @@ NsiDriverEntry(DRIVER_OBJECT *DriverObject)
         DriverObject->MajorFunction[i] = FilterDispatch;
     }
 }
-#pragma prefast(pop)
 
 _Use_decl_annotations_
 NTSTATUS

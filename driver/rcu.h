@@ -44,8 +44,6 @@ struct _RCU_CALLBACK
     };
 };
 
-#pragma prefast(push)
-#pragma prefast(disable : cpp/drivers/irql-annotation-issue) /* The annotations are copied directly from KeRaiseIrqlToDpcLevel. */
 _IRQL_requires_max_(DISPATCH_LEVEL)
 _IRQL_saves_
 _IRQL_raises_(DISPATCH_LEVEL)
@@ -55,7 +53,6 @@ static inline KIRQL RcuReadLock(VOID)
     _Analysis_assume_rcu_acquired_;
     return KeRaiseIrqlToDpcLevel();
 }
-#pragma prefast(pop)
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 _Releases_rcu_
