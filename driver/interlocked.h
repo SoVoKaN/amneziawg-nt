@@ -9,7 +9,6 @@
 #include <wdm.h>
 #include <fltkernel.h>
 
-#pragma warning(suppress : 28194) /* `Value` is aliased in WritePointerNoFence. */
 static inline VOID
 __WritePointerNoFence(_Out_ _Interlocked_operand_ PVOID volatile *Destination, _In_opt_ __drv_aliasesMem PVOID Value)
 {
@@ -19,7 +18,6 @@ __WritePointerNoFence(_Out_ _Interlocked_operand_ PVOID volatile *Destination, _
 /* Suppresses warning about strict type matches, which don't quite make sense in this context. */
 #define WritePointerNoFence(P, V) __WritePointerNoFence((PVOID *)(P), V)
 
-#pragma warning(suppress : 28194) /* `Value` is aliased in WritePointerRelease. */
 static inline VOID
 __WritePointerRelease(_Out_ _Interlocked_operand_ PVOID volatile *Destination, _In_opt_ __drv_aliasesMem PVOID Value)
 {

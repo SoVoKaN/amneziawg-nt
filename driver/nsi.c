@@ -134,7 +134,6 @@ TryBuildMTURow(_In_ IRP *Irp, _Out_ MIB_IPINTERFACE_ROW *Row)
             ProbeForRead((UCHAR *)Params.RwParameterStruct + MtuOffset, sizeof(Row->NlMtu), 1);
         RtlCopyMemory(&Row->NlMtu, (UCHAR *)Params.RwParameterStruct + MtuOffset, sizeof(Row->NlMtu));
     }
-#pragma warning(suppress : 6320)
     __except (EXCEPTION_EXECUTE_HANDLER) { return FALSE; }
     if (!Row->NlMtu || Row->NlMtu == ~0U)
         return FALSE;
