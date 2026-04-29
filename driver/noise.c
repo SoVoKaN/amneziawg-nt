@@ -747,7 +747,6 @@ NoiseHandshakeConsumeResponse(CONST MESSAGE_HANDSHAKE_RESPONSE *Src, WG_DEVICE *
     UINT8 ChainingKey[NOISE_HASH_LEN];
     UINT8 E[NOISE_PUBLIC_KEY_LEN];
     UINT8 EphemeralPrivate[NOISE_PUBLIC_KEY_LEN];
-    UINT8 StaticPrivate[NOISE_PUBLIC_KEY_LEN];
     UINT8 PresharedKey[NOISE_SYMMETRIC_KEY_LEN];
 
     MuAcquirePushLockShared(&Wg->StaticIdentity.Lock);
@@ -815,7 +814,6 @@ out:
     RtlSecureZeroMemory(Hash, NOISE_HASH_LEN);
     RtlSecureZeroMemory(ChainingKey, NOISE_HASH_LEN);
     RtlSecureZeroMemory(EphemeralPrivate, NOISE_PUBLIC_KEY_LEN);
-    RtlSecureZeroMemory(StaticPrivate, NOISE_PUBLIC_KEY_LEN);
     RtlSecureZeroMemory(PresharedKey, NOISE_SYMMETRIC_KEY_LEN);
     MuReleasePushLockShared(&Wg->StaticIdentity.Lock);
     return RetPeer;
