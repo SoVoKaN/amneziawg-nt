@@ -151,20 +151,16 @@ _Use_decl_annotations_
 static NTSTATUS
 FilterDispatch(DEVICE_OBJECT *DeviceObject, IRP *Irp)
 {
+    FILE_OBJECT *FileObject;
+
     if (DeviceObject->DeviceExtension) /* NDIS devices always have an extension. */
         return PriorDispatch[IoGetCurrentIrpStackLocation(Irp)->MajorFunction](DeviceObject, Irp);
     if (!ExAcquireRundownProtection(&FilterRundown))
-    {
-        Irp->IoStatus.Status = STATUS_DEVICE_REMOVED;
-        IoCompleteRequest(Irp, IO_NO_INCREMENT);
-        return STATUS_DEVICE_REMOVED;
-    }
+        goto bypassFilter;
     if (DeviceObject != ReadPointerNoFence(&FilterDevice))
     {
         ExReleaseRundownProtection(&FilterRundown);
-        Irp->IoStatus.Status = STATUS_DEVICE_REMOVED;
-        IoCompleteRequest(Irp, IO_NO_INCREMENT);
-        return STATUS_DEVICE_REMOVED;
+        goto bypassFilter;
     }
 
     MIB_IPINTERFACE_ROW Row = { 0 };
@@ -176,6 +172,17 @@ FilterDispatch(DEVICE_OBJECT *DeviceObject, IRP *Irp)
 
     ExReleaseRundownProtection(&FilterRundown);
     return Status;
+
+bypassFilter:
+    FileObject = IoGetCurrentIrpStackLocation(Irp)->FileObject;
+    if (FileObject && FileObject->DeviceObject)
+    {
+        IoSkipCurrentIrpStackLocation(Irp);
+        return IoCallDriver(FileObject->DeviceObject, Irp);
+    }
+    Irp->IoStatus.Status = STATUS_DEVICE_REMOVED;
+    IoCompleteRequest(Irp, IO_NO_INCREMENT);
+    return STATUS_DEVICE_REMOVED;
 }
 
 static NTSTATUS
