@@ -190,13 +190,13 @@ Attach(VOID)
         goto cleanupFileObject;
     FilterDevice->Flags |= NsiDevice->Flags & (DO_BUFFERED_IO | DO_DIRECT_IO | DO_POWER_PAGABLE);
 
-    ExInitializeRundownProtection(&FilterRundown);
+    ExReInitializeRundownProtection(&FilterRundown);
 
     PDEVICE_OBJECT Attached = IoAttachDeviceToDeviceStack(FilterDevice, NsiDevice);
     if (!Attached)
     {
         Status = STATUS_DEVICE_REMOVED;
-        goto cleanupFilterDevice;
+        goto cleanupRundown;
     }
     NsiDevice = Attached;
     FilterDevice->Flags &= ~DO_DEVICE_INITIALIZING;
@@ -204,7 +204,8 @@ Attach(VOID)
     ObDereferenceObject(NsiFileObject);
     return STATUS_SUCCESS;
 
-cleanupFilterDevice:
+cleanupRundown:
+    ExWaitForRundownProtectionRelease(&FilterRundown);
     {
         DEVICE_OBJECT *FilterDeviceToDelete = FilterDevice;
         WritePointerNoFence(&FilterDevice, NULL);
@@ -240,6 +241,8 @@ NsiDriverEntry(DRIVER_OBJECT *DriverObject)
     InitializeListHead(&DeviceList);
     MuInitializePushLock(&DeviceListLock);
     MuInitializePushLock(&FilterLock);
+    ExInitializeRundownProtection(&FilterRundown);
+    ExWaitForRundownProtectionRelease(&FilterRundown);
     for (ULONG i = 0; i <= IRP_MJ_MAXIMUM_FUNCTION; ++i)
     {
         PriorDispatch[i] = DriverObject->MajorFunction[i];
