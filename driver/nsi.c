@@ -151,11 +151,17 @@ _Use_decl_annotations_
 static NTSTATUS
 FilterDispatch(DEVICE_OBJECT *DeviceObject, IRP *Irp)
 {
-    if (DeviceObject != ReadPointerNoFence(&FilterDevice))
+    if (DeviceObject->DeviceExtension) /* NDIS devices always have an extension. */
         return PriorDispatch[IoGetCurrentIrpStackLocation(Irp)->MajorFunction](DeviceObject, Irp);
-
     if (!ExAcquireRundownProtection(&FilterRundown))
     {
+        Irp->IoStatus.Status = STATUS_DEVICE_REMOVED;
+        IoCompleteRequest(Irp, IO_NO_INCREMENT);
+        return STATUS_DEVICE_REMOVED;
+    }
+    if (DeviceObject != ReadPointerNoFence(&FilterDevice))
+    {
+        ExReleaseRundownProtection(&FilterRundown);
         Irp->IoStatus.Status = STATUS_DEVICE_REMOVED;
         IoCompleteRequest(Irp, IO_NO_INCREMENT);
         return STATUS_DEVICE_REMOVED;
@@ -167,6 +173,7 @@ FilterDispatch(DEVICE_OBJECT *DeviceObject, IRP *Irp)
     NTSTATUS Status = IoCallDriver(NsiDevice, Irp);
     if (ValidMTURow && NT_SUCCESS(Status) && Status != STATUS_PENDING)
         IpInterfaceChangeNotification(NULL, &Row, MibParameterNotification);
+
     ExReleaseRundownProtection(&FilterRundown);
     return Status;
 }
