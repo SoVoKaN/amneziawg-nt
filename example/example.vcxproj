@@ -9,7 +9,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <PlatformToolset>WindowsApplicationForDrivers10.0</PlatformToolset>
   </PropertyGroup>
-  <Import Project="..\wireguard-nt.props" />
+  <Import Project="..\amneziawg-nt.props" />
   <ItemDefinitionGroup>
     <ClCompile>
       <PreprocessorDefinitions>_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -36,7 +36,7 @@
       <Project>{99648503-7DFB-4C06-A87A-E7B66E93FF84}</Project>
     </ProjectReference>
   </ItemGroup>
-  <Import Project="..\wireguard-nt.props.user" Condition="exists('..\wireguard-nt.props.user')" />
+  <Import Project="..\amneziawg-nt.props.user" Condition="exists('..\amneziawg-nt.props.user')" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
   <Target Name="ProductionSign" Condition="'$(SignMode)'=='ProductionSign' And '$(SignStage)'=='SignDriver' And Exists('$(TargetPath)')">

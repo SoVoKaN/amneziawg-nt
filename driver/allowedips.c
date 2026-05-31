@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #include "allowedips.h"
@@ -147,13 +148,13 @@ FindNode(_In_ ALLOWEDIPS_NODE *Trie, _In_ UINT8 Bits, _In_reads_bytes_(Bits / 8)
 _IRQL_requires_max_(DISPATCH_LEVEL)
 _Must_inspect_result_
 _Post_maybenull_
-static WG_PEER *
+static AWG_PEER *
 Lookup(_In_ ALLOWEDIPS_NODE __rcu *Root, _In_ UINT8 Bits, _In_reads_bytes_(Bits / 8) CONST VOID *BeIp)
 {
     /* Aligned so it can be passed to FindLastSet/FindLastSet64 */
     DECLSPEC_ALIGN(8) UINT8 Ip[16];
     ALLOWEDIPS_NODE *Node;
-    WG_PEER *Peer = NULL;
+    AWG_PEER *Peer = NULL;
     KIRQL Irql;
 
     SwapEndian(Ip, BeIp, Bits);
@@ -219,7 +220,7 @@ Add(_Inout_ ALLOWEDIPS_NODE __rcu **Trie,
     _In_ UINT8 Bits,
     _In_ CONST UINT8 *Key,
     _In_ UINT8 Cidr,
-    _In_ WG_PEER *Peer,
+    _In_ AWG_PEER *Peer,
     _In_ EX_PUSH_LOCK *Lock)
 {
     ALLOWEDIPS_NODE *Node, *Parent, *Down, *Newnode;
@@ -340,7 +341,7 @@ Remove(_Inout_ ALLOWEDIPS_NODE __rcu **Trie,
        _In_ UINT8 Bits,
        _In_ CONST UINT8 *Key,
        _In_ UINT8 Cidr,
-       _In_ WG_PEER *Peer,
+       _In_ AWG_PEER *Peer,
        _In_ EX_PUSH_LOCK *Lock)
 {
     ALLOWEDIPS_NODE *Node;
@@ -385,7 +386,7 @@ AllowedIpsFree(ALLOWEDIPS_TABLE *Table, EX_PUSH_LOCK *Lock)
 
 _Use_decl_annotations_
 NTSTATUS
-AllowedIpsInsertV4(ALLOWEDIPS_TABLE *Table, CONST IN_ADDR *Ip, UINT8 Cidr, WG_PEER *Peer, EX_PUSH_LOCK *Lock)
+AllowedIpsInsertV4(ALLOWEDIPS_TABLE *Table, CONST IN_ADDR *Ip, UINT8 Cidr, AWG_PEER *Peer, EX_PUSH_LOCK *Lock)
 {
     /* Aligned so it can be passed to FindLastSet */
     DECLSPEC_ALIGN(4) UINT8 Key[4];
@@ -396,7 +397,7 @@ AllowedIpsInsertV4(ALLOWEDIPS_TABLE *Table, CONST IN_ADDR *Ip, UINT8 Cidr, WG_PE
 
 _Use_decl_annotations_
 NTSTATUS
-AllowedIpsInsertV6(ALLOWEDIPS_TABLE *Table, CONST IN6_ADDR *Ip, UINT8 Cidr, WG_PEER *Peer, EX_PUSH_LOCK *Lock)
+AllowedIpsInsertV6(ALLOWEDIPS_TABLE *Table, CONST IN6_ADDR *Ip, UINT8 Cidr, AWG_PEER *Peer, EX_PUSH_LOCK *Lock)
 {
     /* Aligned so it can be passed to FindLastSet64 */
     DECLSPEC_ALIGN(8) UINT8 Key[16];
@@ -407,7 +408,7 @@ AllowedIpsInsertV6(ALLOWEDIPS_TABLE *Table, CONST IN6_ADDR *Ip, UINT8 Cidr, WG_P
 
 _Use_decl_annotations_
 NTSTATUS
-AllowedIpsRemoveV4(ALLOWEDIPS_TABLE *Table, CONST IN_ADDR *Ip, UINT8 Cidr, WG_PEER *Peer, EX_PUSH_LOCK *Lock)
+AllowedIpsRemoveV4(ALLOWEDIPS_TABLE *Table, CONST IN_ADDR *Ip, UINT8 Cidr, AWG_PEER *Peer, EX_PUSH_LOCK *Lock)
 {
     /* Aligned so it can be passed to FindLastSet */
     DECLSPEC_ALIGN(4) UINT8 Key[4];
@@ -418,7 +419,7 @@ AllowedIpsRemoveV4(ALLOWEDIPS_TABLE *Table, CONST IN_ADDR *Ip, UINT8 Cidr, WG_PE
 
 _Use_decl_annotations_
 NTSTATUS
-AllowedIpsRemoveV6(ALLOWEDIPS_TABLE *Table, CONST IN6_ADDR *Ip, UINT8 Cidr, WG_PEER *Peer, EX_PUSH_LOCK *Lock)
+AllowedIpsRemoveV6(ALLOWEDIPS_TABLE *Table, CONST IN6_ADDR *Ip, UINT8 Cidr, AWG_PEER *Peer, EX_PUSH_LOCK *Lock)
 {
     /* Aligned so it can be passed to FindLastSet64 */
     DECLSPEC_ALIGN(8) UINT8 Key[16];
@@ -429,7 +430,7 @@ AllowedIpsRemoveV6(ALLOWEDIPS_TABLE *Table, CONST IN6_ADDR *Ip, UINT8 Cidr, WG_P
 
 _Use_decl_annotations_
 VOID
-AllowedIpsRemoveByPeer(ALLOWEDIPS_TABLE *Table, WG_PEER *Peer, EX_PUSH_LOCK *Lock)
+AllowedIpsRemoveByPeer(ALLOWEDIPS_TABLE *Table, AWG_PEER *Peer, EX_PUSH_LOCK *Lock)
 {
     ALLOWEDIPS_NODE *Node, *Tmp;
 
@@ -455,7 +456,7 @@ AllowedIpsReadNode(CONST ALLOWEDIPS_NODE *Node, UINT8 Ip[16], UINT8 *Cidr)
 
 /* Returns a strong reference to a peer */
 _Use_decl_annotations_
-WG_PEER *
+AWG_PEER *
 AllowedIpsLookupDst(ALLOWEDIPS_TABLE *Table, UINT16_BE Proto, CONST VOID *IpHdr)
 {
     if (Proto == Htons(NDIS_ETH_TYPE_IPV4))
@@ -467,7 +468,7 @@ AllowedIpsLookupDst(ALLOWEDIPS_TABLE *Table, UINT16_BE Proto, CONST VOID *IpHdr)
 
 /* Returns a strong reference to a peer */
 _Use_decl_annotations_
-WG_PEER *
+AWG_PEER *
 AllowedIpsLookupSrc(ALLOWEDIPS_TABLE *Table, UINT16_BE Proto, CONST VOID *IpHdr)
 {
     if (Proto == Htons(NDIS_ETH_TYPE_IPV4))

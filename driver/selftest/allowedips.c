@@ -7,7 +7,7 @@ static inline IN_ADDR *
 Ip4(UINT8 A, UINT8 B, UINT8 C, UINT8 D);
 static inline IN6_ADDR *
 Ip6(UINT32 A, UINT32 B, UINT32 C, UINT32 D);
-static WG_PEER *InitPeer(VOID);
+static AWG_PEER *InitPeer(VOID);
 
 #ifdef ALLOC_PRAGMA
 #    pragma alloc_text(INIT, Ip4)
@@ -42,9 +42,9 @@ Ip6(UINT32 A, UINT32 B, UINT32 C, UINT32 D)
     return &Ip;
 }
 
-static WG_PEER *InitPeer(VOID)
+static AWG_PEER *InitPeer(VOID)
 {
-    WG_PEER *Peer = MemAllocateAndZero(sizeof(*Peer));
+    AWG_PEER *Peer = MemAllocateAndZero(sizeof(*Peer));
 
     if (!Peer)
         return NULL;
@@ -96,7 +96,7 @@ BOOLEAN
 AllowedIpsSelftest(VOID)
 {
     BOOLEAN FoundA = FALSE, FoundB = FALSE, FoundC = FALSE, FoundD = FALSE, FoundE = FALSE, FoundOther = FALSE;
-    WG_PEER *A = InitPeer(), *B = InitPeer(), *C = InitPeer(), *D = InitPeer(), *E = InitPeer(), *F = InitPeer(),
+    AWG_PEER *A = InitPeer(), *B = InitPeer(), *C = InitPeer(), *D = InitPeer(), *E = InitPeer(), *F = InitPeer(),
             *G = InitPeer(), *H = InitPeer();
     ALLOWEDIPS_NODE *IterNode;
     BOOLEAN Success = FALSE;

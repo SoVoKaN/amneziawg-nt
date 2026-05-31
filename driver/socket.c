@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #include <ntifs.h> /* Must be included before <wdm.h> */
@@ -41,7 +42,7 @@ typedef union _WSK_IRP
 typedef struct _SOCKET_SEND_CTX
 {
     WSK_IRP;
-    WG_DEVICE *Wg;
+    AWG_DEVICE *Wg;
     union
     {
         NET_BUFFER_LIST *FirstNbl;
@@ -100,7 +101,7 @@ _IRQL_raises_(DISPATCH_LEVEL)
 _Acquires_shared_lock_(Peer->EndpointLock)
 _Requires_lock_not_held_(Peer->EndpointLock)
 static NTSTATUS
-SocketResolvePeerEndpoint(_Inout_ WG_PEER *Peer, _Out_ _At_(*Irql, _IRQL_saves_) KIRQL *Irql)
+SocketResolvePeerEndpoint(_Inout_ AWG_PEER *Peer, _Out_ _At_(*Irql, _IRQL_saves_) KIRQL *Irql)
 {
     *Irql = ExAcquireSpinLockShared(&Peer->EndpointLock);
 retryWhileHoldingSharedLock:
@@ -207,7 +208,7 @@ retryWhileHoldingSharedLock:
 
 _Use_decl_annotations_
 NTSTATUS
-SocketSendNblsToPeer(WG_PEER *Peer, NET_BUFFER_LIST *First, BOOLEAN *AllKeepalive)
+SocketSendNblsToPeer(AWG_PEER *Peer, NET_BUFFER_LIST *First, BOOLEAN *AllKeepalive)
 {
     if (!First)
         return STATUS_ALREADY_COMPLETE;
@@ -289,7 +290,7 @@ cleanupNbls:
 
 _Use_decl_annotations_
 NTSTATUS
-SocketSendBufferToPeer(WG_PEER *Peer, CONST VOID *Buffer, ULONG Len)
+SocketSendBufferToPeer(AWG_PEER *Peer, CONST VOID *Buffer, ULONG Len)
 {
     NTSTATUS Status = STATUS_INSUFFICIENT_RESOURCES;
     SOCKET_SEND_CTX *Ctx = ExAllocateFromLookasideListEx(&SocketSendCtxCache);
@@ -346,7 +347,7 @@ cleanupCtx:
 
 _Use_decl_annotations_
 NTSTATUS
-SocketSendBufferAsReplyToNbl(WG_DEVICE *Wg, CONST NET_BUFFER_LIST *InNbl, CONST VOID *Buffer, ULONG Len)
+SocketSendBufferAsReplyToNbl(AWG_DEVICE *Wg, CONST NET_BUFFER_LIST *InNbl, CONST VOID *Buffer, ULONG Len)
 {
     NTSTATUS Status = STATUS_INSUFFICIENT_RESOURCES;
     SOCKET_SEND_CTX *Ctx = ExAllocateFromLookasideListEx(&SocketSendCtxCache);
@@ -499,7 +500,7 @@ EndpointEq(_In_ CONST ENDPOINT *A, _In_ CONST ENDPOINT *B)
 
 _Use_decl_annotations_
 VOID
-SocketSetPeerEndpoint(WG_PEER *Peer, CONST ENDPOINT *Endpoint)
+SocketSetPeerEndpoint(AWG_PEER *Peer, CONST ENDPOINT *Endpoint)
 {
     KIRQL Irql;
 
@@ -541,7 +542,7 @@ out:
 
 _Use_decl_annotations_
 VOID
-SocketSetPeerEndpointFromNbl(WG_PEER *Peer, CONST NET_BUFFER_LIST *Nbl)
+SocketSetPeerEndpointFromNbl(AWG_PEER *Peer, CONST NET_BUFFER_LIST *Nbl)
 {
     ENDPOINT Endpoint;
 
@@ -551,7 +552,7 @@ SocketSetPeerEndpointFromNbl(WG_PEER *Peer, CONST NET_BUFFER_LIST *Nbl)
 
 _Use_decl_annotations_
 VOID
-SocketClearPeerEndpointSrc(WG_PEER *Peer)
+SocketClearPeerEndpointSrc(AWG_PEER *Peer)
 {
     KIRQL Irql;
 
@@ -570,7 +571,7 @@ Receive(_In_opt_ PVOID SocketContext, _In_ ULONG Flags, _In_opt_ WSK_DATAGRAM_IN
     SOCKET *Socket = SocketContext;
     if (!Socket || !Socket->Sock || !DataIndication)
         return STATUS_SUCCESS;
-    WG_DEVICE *Wg = Socket->Device;
+    AWG_DEVICE *Wg = Socket->Device;
     NET_BUFFER_LIST *First = NULL, **Link = &First;
     for (WSK_DATAGRAM_INDICATION *DataIndicationNext; DataIndication; DataIndication = DataIndicationNext)
     {
@@ -657,7 +658,7 @@ SetSockOpt(
 
 _IRQL_requires_max_(APC_LEVEL)
 static NTSTATUS
-CreateAndBindSocket(_In_ WG_DEVICE *Wg, _Inout_ SOCKADDR *Sa, _Out_ SOCKET **RetSocket)
+CreateAndBindSocket(_In_ AWG_DEVICE *Wg, _Inout_ SOCKADDR *Sa, _Out_ SOCKET **RetSocket)
 {
     NTSTATUS Status = STATUS_INSUFFICIENT_RESOURCES;
     SOCKET *Socket = MemAllocate(sizeof(*Socket));
@@ -881,7 +882,7 @@ out:
 
 _Use_decl_annotations_
 NTSTATUS
-SocketInit(WG_DEVICE *Wg, UINT16 Port)
+SocketInit(AWG_DEVICE *Wg, UINT16 Port)
 {
     NTSTATUS Status;
     SOCKADDR_IN Sa4 = { .sin_family = AF_INET, .sin_addr.s_addr = Htonl(INADDR_ANY), .sin_port = Htons(Port) };
@@ -930,7 +931,7 @@ out:
 
 _Use_decl_annotations_
 VOID
-SocketReinit(WG_DEVICE *Wg, SOCKET *New4, SOCKET *New6, UINT16 Port)
+SocketReinit(AWG_DEVICE *Wg, SOCKET *New4, SOCKET *New6, UINT16 Port)
 {
     MuAcquirePushLockExclusive(&Wg->SocketUpdateLock);
     SOCKET *Old4 = RcuDereferenceProtected(Wg->Sock4, &Wg->SocketUpdateLock);

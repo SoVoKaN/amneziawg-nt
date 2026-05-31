@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #include "interlocked.h"
@@ -30,7 +31,7 @@ IpInterfaceChangeNotification(
         (NotificationType == MibParameterNotification && (!Row->NlMtu || Row->NlMtu == ~0U)))
         return;
     MuAcquirePushLockShared(&DeviceListLock);
-    WG_DEVICE *IterWg, *Wg = NULL;
+    AWG_DEVICE *IterWg, *Wg = NULL;
     LIST_FOR_EACH_ENTRY (IterWg, &DeviceList, DeviceList)
     {
         if (IterWg->InterfaceLuid.Value == Row->InterfaceLuid.Value)
@@ -266,7 +267,7 @@ NsiDriverEntry(DRIVER_OBJECT *DriverObject)
 
 _Use_decl_annotations_
 NTSTATUS
-NsiActivate(WG_DEVICE *Wg)
+NsiActivate(AWG_DEVICE *Wg)
 {
     NTSTATUS Status;
     MuAcquirePushLockExclusive(&FilterLock);
@@ -288,7 +289,7 @@ NsiActivate(WG_DEVICE *Wg)
 
 _Use_decl_annotations_
 VOID
-NsiDeactivate(WG_DEVICE *Wg)
+NsiDeactivate(AWG_DEVICE *Wg)
 {
     MuAcquirePushLockExclusive(&FilterLock);
     MuAcquirePushLockExclusive(&DeviceListLock);

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #pragma once
@@ -11,7 +12,7 @@
 #include <wsk.h>
 #include "ioctl.h"
 
-#define LOG_DRIVER_PREFIX "wireguard: "
+#define LOG_DRIVER_PREFIX "amneziawg: "
 #define LOG_DEVICE_PREFIX "%u: "
 
 #if DBG
@@ -81,7 +82,7 @@ enum
 
 typedef struct _LOG_RING
 {
-    WG_IOCTL_LOG_ENTRY Entries[BUFFERED_LOG_ENTRIES];
+    AWG_IOCTL_LOG_ENTRY Entries[BUFFERED_LOG_ENTRIES];
     LONG FirstAndLength;
     LONG CurrentWriters;
     KEVENT NewEntry;
@@ -102,7 +103,7 @@ _IRQL_requires_max_(APC_LEVEL)
 NTSTATUS
 LogRingRead(
     _Inout_ LOG_RING *Log,
-    _Out_ WG_IOCTL_LOG_ENTRY *Entry,
+    _Out_ AWG_IOCTL_LOG_ENTRY *Entry,
     _In_ BOOLEAN *WhileFalse);
 
 _IRQL_requires_max_(DISPATCH_LEVEL)

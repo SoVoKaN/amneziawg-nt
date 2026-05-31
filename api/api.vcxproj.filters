@@ -46,7 +46,7 @@
     <ClInclude Include="adapter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="wireguard.h">
+    <ClInclude Include="amneziawg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="main.h">

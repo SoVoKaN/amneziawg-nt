@@ -15,58 +15,58 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "wireguard.h"
+#include "amneziawg.h"
 
-static WIREGUARD_CREATE_ADAPTER_FUNC *WireGuardCreateAdapter;
-static WIREGUARD_OPEN_ADAPTER_FUNC *WireGuardOpenAdapter;
-static WIREGUARD_CLOSE_ADAPTER_FUNC *WireGuardCloseAdapter;
-static WIREGUARD_GET_ADAPTER_LUID_FUNC *WireGuardGetAdapterLUID;
-static WIREGUARD_GET_RUNNING_DRIVER_VERSION_FUNC *WireGuardGetRunningDriverVersion;
-static WIREGUARD_DELETE_DRIVER_FUNC *WireGuardDeleteDriver;
-static WIREGUARD_SET_LOGGER_FUNC *WireGuardSetLogger;
-static WIREGUARD_SET_ADAPTER_LOGGING_FUNC *WireGuardSetAdapterLogging;
-static WIREGUARD_GET_ADAPTER_STATE_FUNC *WireGuardGetAdapterState;
-static WIREGUARD_SET_ADAPTER_STATE_FUNC *WireGuardSetAdapterState;
-static WIREGUARD_GET_CONFIGURATION_FUNC *WireGuardGetConfiguration;
-static WIREGUARD_SET_CONFIGURATION_FUNC *WireGuardSetConfiguration;
+static AMNEZIAWG_CREATE_ADAPTER_FUNC *AmneziaWGCreateAdapter;
+static AMNEZIAWG_OPEN_ADAPTER_FUNC *AmneziaWGOpenAdapter;
+static AMNEZIAWG_CLOSE_ADAPTER_FUNC *AmneziaWGCloseAdapter;
+static AMNEZIAWG_GET_ADAPTER_LUID_FUNC *AmneziaWGGetAdapterLUID;
+static AMNEZIAWG_GET_RUNNING_DRIVER_VERSION_FUNC *AmneziaWGGetRunningDriverVersion;
+static AMNEZIAWG_DELETE_DRIVER_FUNC *AmneziaWGDeleteDriver;
+static AMNEZIAWG_SET_LOGGER_FUNC *AmneziaWGSetLogger;
+static AMNEZIAWG_SET_ADAPTER_LOGGING_FUNC *AmneziaWGSetAdapterLogging;
+static AMNEZIAWG_GET_ADAPTER_STATE_FUNC *AmneziaWGGetAdapterState;
+static AMNEZIAWG_SET_ADAPTER_STATE_FUNC *AmneziaWGSetAdapterState;
+static AMNEZIAWG_GET_CONFIGURATION_FUNC *AmneziaWGGetConfiguration;
+static AMNEZIAWG_SET_CONFIGURATION_FUNC *AmneziaWGSetConfiguration;
 
 static HMODULE
-InitializeWireGuardNT(void)
+InitializeAmneziaWGNT(void)
 {
-    HMODULE WireGuardDll =
-        LoadLibraryExW(L"wireguard.dll", NULL, LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32);
-    if (!WireGuardDll)
+    HMODULE AmneziaWGDll =
+        LoadLibraryExW(L"amneziawg.dll", NULL, LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32);
+    if (!AmneziaWGDll)
         return NULL;
-#define X(Name) ((*(FARPROC *)&Name = GetProcAddress(WireGuardDll, #Name)) == NULL)
-    if (X(WireGuardCreateAdapter) || X(WireGuardOpenAdapter) || X(WireGuardCloseAdapter) ||
-        X(WireGuardGetAdapterLUID) || X(WireGuardGetRunningDriverVersion) || X(WireGuardDeleteDriver) ||
-        X(WireGuardSetLogger) || X(WireGuardSetAdapterLogging) || X(WireGuardGetAdapterState) ||
-        X(WireGuardSetAdapterState) || X(WireGuardGetConfiguration) || X(WireGuardSetConfiguration))
+#define X(Name) ((*(FARPROC *)&Name = GetProcAddress(AmneziaWGDll, #Name)) == NULL)
+    if (X(AmneziaWGCreateAdapter) || X(AmneziaWGOpenAdapter) || X(AmneziaWGCloseAdapter) ||
+        X(AmneziaWGGetAdapterLUID) || X(AmneziaWGGetRunningDriverVersion) || X(AmneziaWGDeleteDriver) ||
+        X(AmneziaWGSetLogger) || X(AmneziaWGSetAdapterLogging) || X(AmneziaWGGetAdapterState) ||
+        X(AmneziaWGSetAdapterState) || X(AmneziaWGGetConfiguration) || X(AmneziaWGSetConfiguration))
 #undef X
     {
         DWORD LastError = GetLastError();
-        FreeLibrary(WireGuardDll);
+        FreeLibrary(AmneziaWGDll);
         SetLastError(LastError);
         return NULL;
     }
-    return WireGuardDll;
+    return AmneziaWGDll;
 }
 
 static void CALLBACK
-ConsoleLogger(_In_ WIREGUARD_LOGGER_LEVEL Level, _In_ DWORD64 Timestamp, _In_z_ const WCHAR *LogLine)
+ConsoleLogger(_In_ AMNEZIAWG_LOGGER_LEVEL Level, _In_ DWORD64 Timestamp, _In_z_ const WCHAR *LogLine)
 {
     SYSTEMTIME SystemTime;
     FileTimeToSystemTime((FILETIME *)&Timestamp, &SystemTime);
     WCHAR LevelMarker;
     switch (Level)
     {
-    case WIREGUARD_LOG_INFO:
+    case AMNEZIAWG_LOG_INFO:
         LevelMarker = L'+';
         break;
-    case WIREGUARD_LOG_WARN:
+    case AMNEZIAWG_LOG_WARN:
         LevelMarker = L'-';
         break;
-    case WIREGUARD_LOG_ERR:
+    case AMNEZIAWG_LOG_ERR:
         LevelMarker = L'!';
         break;
     default:
@@ -115,7 +115,7 @@ LogError(_In_z_ const WCHAR *Prefix, _In_ DWORD Error)
         0,
         (va_list *)(DWORD_PTR[]){ (DWORD_PTR)Prefix, (DWORD_PTR)Error, (DWORD_PTR)SystemMessage });
     if (FormattedMessage)
-        ConsoleLogger(WIREGUARD_LOG_ERR, Now(), FormattedMessage);
+        ConsoleLogger(AMNEZIAWG_LOG_ERR, Now(), FormattedMessage);
     LocalFree(FormattedMessage);
     LocalFree(SystemMessage);
     return Error;
@@ -131,7 +131,7 @@ LogLastError(_In_z_ const WCHAR *Prefix)
 }
 
 static void
-Log(_In_ WIREGUARD_LOGGER_LEVEL Level, _In_z_ const WCHAR *Format, ...)
+Log(_In_ AMNEZIAWG_LOGGER_LEVEL Level, _In_z_ const WCHAR *Format, ...)
 {
     WCHAR LogLine[0x200];
     va_list args;
@@ -145,8 +145,8 @@ _Must_inspect_result_
 _Return_type_success_(return != FALSE)
 static BOOL
 GenerateKeyPair(
-    _Out_writes_bytes_all_(WIREGUARD_KEY_LENGTH) BYTE PublicKey[WIREGUARD_KEY_LENGTH],
-    _Out_writes_bytes_all_(WIREGUARD_KEY_LENGTH) BYTE PrivateKey[WIREGUARD_KEY_LENGTH])
+    _Out_writes_bytes_all_(AMNEZIAWG_KEY_LENGTH) BYTE PublicKey[AMNEZIAWG_KEY_LENGTH],
+    _Out_writes_bytes_all_(AMNEZIAWG_KEY_LENGTH) BYTE PrivateKey[AMNEZIAWG_KEY_LENGTH])
 {
     BCRYPT_ALG_HANDLE Algorithm;
     BCRYPT_KEY_HANDLE Key;
@@ -181,8 +181,8 @@ GenerateKeyPair(
     if (!NT_SUCCESS(Status))
         goto cleanupKey;
 
-    memcpy(PublicKey, ExportedKey.Public, WIREGUARD_KEY_LENGTH);
-    memcpy(PrivateKey, ExportedKey.Private, WIREGUARD_KEY_LENGTH);
+    memcpy(PublicKey, ExportedKey.Public, AMNEZIAWG_KEY_LENGTH);
+    memcpy(PrivateKey, ExportedKey.Private, AMNEZIAWG_KEY_LENGTH);
     SecureZeroMemory(&ExportedKey, sizeof(ExportedKey));
 
 cleanupKey:
@@ -206,7 +206,7 @@ CtrlHandler(_In_ DWORD CtrlType)
     case CTRL_CLOSE_EVENT:
     case CTRL_LOGOFF_EVENT:
     case CTRL_SHUTDOWN_EVENT:
-        Log(WIREGUARD_LOG_INFO, L"Cleaning up and shutting down");
+        Log(AMNEZIAWG_LOG_INFO, L"Cleaning up and shutting down");
         SetEvent(QuitEvent);
         return TRUE;
     }
@@ -264,44 +264,44 @@ int __cdecl main(void)
     DWORD LastError = WSAStartup(MAKEWORD(2, 2), &WsaData);
     if (LastError)
         return LogError(L"Failed to initialize Winsock", LastError);
-    HMODULE WireGuard = InitializeWireGuardNT();
-    if (!WireGuard)
+    HMODULE AmneziaWG = InitializeAmneziaWGNT();
+    if (!AmneziaWG)
     {
-        LastError = LogError(L"Failed to initialize WireGuardNT", GetLastError());
+        LastError = LogError(L"Failed to initialize AmneziaWGNT", GetLastError());
         goto cleanupWinsock;
     }
-    WireGuardSetLogger(ConsoleLogger);
-    Log(WIREGUARD_LOG_INFO, L"WireGuardNT library loaded");
+    AmneziaWGSetLogger(ConsoleLogger);
+    Log(AMNEZIAWG_LOG_INFO, L"AmneziaWGNT library loaded");
 
     struct
     {
-        WIREGUARD_INTERFACE Interface;
-        WIREGUARD_PEER DemoServer;
-        WIREGUARD_ALLOWED_IP AllV4;
-    } Config = { .Interface = { .Flags = WIREGUARD_INTERFACE_HAS_PRIVATE_KEY, .PeersCount = 1 },
-                 .DemoServer = { .Flags = WIREGUARD_PEER_HAS_PUBLIC_KEY | WIREGUARD_PEER_HAS_ENDPOINT,
+        AMNEZIAWG_INTERFACE Interface;
+        AMNEZIAWG_PEER DemoServer;
+        AMNEZIAWG_ALLOWED_IP AllV4;
+    } Config = { .Interface = { .Flags = AMNEZIAWG_INTERFACE_HAS_PRIVATE_KEY, .PeersCount = 1 },
+                 .DemoServer = { .Flags = AMNEZIAWG_PEER_HAS_PUBLIC_KEY | AMNEZIAWG_PEER_HAS_ENDPOINT,
                                  .AllowedIPsCount = 1 },
                  .AllV4 = { .AddressFamily = AF_INET } };
 
-    Log(WIREGUARD_LOG_INFO, L"Generating keypair");
-    BYTE PublicKey[WIREGUARD_KEY_LENGTH];
+    Log(AMNEZIAWG_LOG_INFO, L"Generating keypair");
+    BYTE PublicKey[AMNEZIAWG_KEY_LENGTH];
     if (!GenerateKeyPair(PublicKey, Config.Interface.PrivateKey))
     {
         LastError = LogError(L"Failed to generate keypair", GetLastError());
-        goto cleanupWireGuard;
+        goto cleanupAmneziaWG;
     }
     CHAR PublicKeyString[46] = { 0 };
     DWORD Bytes = sizeof(PublicKeyString);
     CryptBinaryToStringA(
         PublicKey, sizeof(PublicKey), CRYPT_STRING_BASE64 | CRYPT_STRING_NOCR, PublicKeyString, &Bytes);
     CHAR ServerResponse[256] = { 0 };
-    Log(WIREGUARD_LOG_INFO, L"Talking to demo server");
+    Log(AMNEZIAWG_LOG_INFO, L"Talking to demo server");
     Bytes = sizeof(ServerResponse) - 1;
     if (!TalkToDemoServer(
             PublicKeyString, (DWORD)strlen(PublicKeyString), ServerResponse, &Bytes, &Config.DemoServer.Endpoint))
     {
         LastError = LogError(L"Failed to talk to demo server", GetLastError());
-        goto cleanupWireGuard;
+        goto cleanupAmneziaWG;
     }
 
     CHAR *Colon1 = strchr(ServerResponse, ':');
@@ -310,7 +310,7 @@ int __cdecl main(void)
     if (!Colon1 || !Colon2 || !Colon3)
     {
         LastError = LogError(L"Failed to parse demo server response", ERROR_UNDEFINED_CHARACTER);
-        goto cleanupWireGuard;
+        goto cleanupAmneziaWG;
     }
     if (Bytes && ServerResponse[--Bytes] == '\n')
         ServerResponse[Bytes] = '\0';
@@ -326,7 +326,7 @@ int __cdecl main(void)
         !CryptStringToBinaryA(Colon1 + 1, 0, CRYPT_STRING_BASE64, Config.DemoServer.PublicKey, &Bytes, NULL, NULL))
     {
         LastError = LogError(L"Failed to parse demo server response", ERROR_UNDEFINED_CHARACTER);
-        goto cleanupWireGuard;
+        goto cleanupAmneziaWG;
     }
     if (Config.DemoServer.Endpoint.si_family == AF_INET)
         Config.DemoServer.Endpoint.Ipv4.sin_port = htons((u_short)atoi(Colon2 + 1));
@@ -337,7 +337,7 @@ int __cdecl main(void)
     if (!QuitEvent)
     {
         LastError = LogError(L"Failed to create event", GetLastError());
-        goto cleanupWireGuard;
+        goto cleanupAmneziaWG;
     }
     if (!SetConsoleCtrlHandler(CtrlHandler, TRUE))
     {
@@ -346,7 +346,7 @@ int __cdecl main(void)
     }
 
     GUID ExampleGuid = { 0xdeadc001, 0xbeef, 0xbabe, { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef } };
-    WIREGUARD_ADAPTER_HANDLE Adapter = WireGuardCreateAdapter(L"Demo", L"Example", &ExampleGuid);
+    AMNEZIAWG_ADAPTER_HANDLE Adapter = AmneziaWGCreateAdapter(L"Demo", L"Example", &ExampleGuid);
     if (!Adapter)
     {
         LastError = GetLastError();
@@ -354,13 +354,13 @@ int __cdecl main(void)
         goto cleanupQuit;
     }
 
-    if (!WireGuardSetAdapterLogging(Adapter, WIREGUARD_ADAPTER_LOG_ON))
+    if (!AmneziaWGSetAdapterLogging(Adapter, AMNEZIAWG_ADAPTER_LOG_ON))
         LogError(L"Failed to enable adapter logging", GetLastError());
 
-    DWORD Version = WireGuardGetRunningDriverVersion();
-    Log(WIREGUARD_LOG_INFO, L"WireGuardNT v%u.%u loaded", (Version >> 16) & 0xff, (Version >> 0) & 0xff);
+    DWORD Version = AmneziaWGGetRunningDriverVersion();
+    Log(AMNEZIAWG_LOG_INFO, L"AmneziaWGNT v%u.%u loaded", (Version >> 16) & 0xff, (Version >> 0) & 0xff);
 
-    WireGuardGetAdapterLUID(Adapter, &AddressRow.InterfaceLuid);
+    AmneziaWGGetAdapterLUID(Adapter, &AddressRow.InterfaceLuid);
     MIB_IPFORWARD_ROW2 DefaultRoute = { 0 };
     InitializeIpForwardEntry(&DefaultRoute);
     DefaultRoute.InterfaceLuid = AddressRow.InterfaceLuid;
@@ -400,9 +400,9 @@ int __cdecl main(void)
         goto cleanupAdapter;
     }
 
-    Log(WIREGUARD_LOG_INFO, L"Setting configuration and adapter up");
-    if (!WireGuardSetConfiguration(Adapter, &Config.Interface, sizeof(Config)) ||
-        !WireGuardSetAdapterState(Adapter, WIREGUARD_ADAPTER_STATE_UP))
+    Log(AMNEZIAWG_LOG_INFO, L"Setting configuration and adapter up");
+    if (!AmneziaWGSetConfiguration(Adapter, &Config.Interface, sizeof(Config)) ||
+        !AmneziaWGSetAdapterState(Adapter, AMNEZIAWG_ADAPTER_STATE_UP))
     {
         LastError = LogError(L"Failed to set configuration and adapter up", GetLastError());
         goto cleanupAdapter;
@@ -411,7 +411,7 @@ int __cdecl main(void)
     do
     {
         Bytes = sizeof(Config);
-        if (!WireGuardGetConfiguration(Adapter, &Config.Interface, &Bytes) || !Config.Interface.PeersCount)
+        if (!AmneziaWGGetConfiguration(Adapter, &Config.Interface, &Bytes) || !Config.Interface.PeersCount)
         {
             LastError = LogError(L"Failed to get configuration", GetLastError());
             goto cleanupAdapter;
@@ -434,12 +434,12 @@ int __cdecl main(void)
     } while (WaitForSingleObject(QuitEvent, 1000) == WAIT_TIMEOUT);
 
 cleanupAdapter:
-    WireGuardCloseAdapter(Adapter);
+    AmneziaWGCloseAdapter(Adapter);
 cleanupQuit:
     SetConsoleCtrlHandler(CtrlHandler, FALSE);
     CloseHandle(QuitEvent);
-cleanupWireGuard:
-    FreeLibrary(WireGuard);
+cleanupAmneziaWG:
+    FreeLibrary(AmneziaWG);
 cleanupWinsock:
     WSACleanup();
     return LastError;

@@ -1,0 +1,71 @@
+; SPDX-License-Identifier: GPL-2.0
+;
+; Copyright (C) 2018-2026 WireGuard LLC. All Rights Reserved.
+
+[Version]
+Signature = "$Windows NT$"
+Class = Net
+ClassGUID = {4D36E972-E325-11CE-BFC1-08002BE10318}
+Provider = %AmneziaWG.CompanyName%
+CatalogFile.NT = amneziawg.cat
+PnpLockDown = 1
+
+[Manufacturer]
+%AmneziaWG.CompanyName% = %AmneziaWG.Name%, NT$ARCH$
+
+[SourceDisksNames]
+1 = %AmneziaWG.DiskDesc%, "", ,
+
+[SourceDisksFiles]
+amneziawg.sys = 1
+
+[DestinationDirs]
+DefaultDestDir = 12
+AmneziaWG.CopyFiles.Sys = 12
+
+[AmneziaWG.CopyFiles.Sys]
+amneziawg.sys, , , 0x00004002 ; COPYFLG_IN_USE_RENAME | COPYFLG_NOSKIP
+
+[AmneziaWG.NT$ARCH$]
+%AmneziaWG.DeviceDesc% = AmneziaWG.Install, AmneziaWG
+
+[AmneziaWG.Install]
+Characteristics = 0x1 ; NCF_VIRTUAL
+AddReg = AmneziaWG.Ndi
+AddProperty = AmneziaWG.Properties
+CopyFiles = AmneziaWG.CopyFiles.Sys
+*IfType = 53 ; IF_TYPE_PROP_VIRTUAL
+*MediaType = 19 ; NdisMediumIP
+*PhysicalMediaType = 0 ; NdisPhysicalMediumUnspecified
+EnableDhcp = 0 ; Disable DHCP
+
+[AmneziaWG.Properties]
+DeviceIcon,,,,"%12%\amneziawg.sys,-7"
+DeviceBrandingIcon,,,,"%12%\amneziawg.sys,-7"
+DeviceVendorWebsite,,,,"https://amnezia.org/"
+
+[AmneziaWG.Install.Services]
+AddService = AmneziaWG, 2, AmneziaWG.Service, AmneziaWG.EventLog ; 2=SPSVCINST_ASSOCSERVICE
+
+[AmneziaWG.Ndi]
+HKR, Ndi, Service, 0, AmneziaWG
+HKR, Ndi\Interfaces, UpperRange, , "ndis5"
+HKR, Ndi\Interfaces, LowerRange, , "nolower"
+
+[AmneziaWG.Service]
+DisplayName = %AmneziaWG.Name%
+Description = %AmneziaWG.DeviceDesc%
+ServiceType = 1 ; SERVICE_KERNEL_DRIVER
+StartType = 3 ; SERVICE_DEMAND_START
+ErrorControl = 1 ; SERVICE_ERROR_NORMAL
+ServiceBinary = %12%\amneziawg.sys
+
+[AmneziaWG.EventLog]
+HKR, , EventMessageFile, 0x00020000, "%11%\IoLogMsg.dll;%12%\amneziawg.sys"
+HKR, , TypesSupported, 0x00010001, 7
+
+[Strings]
+AmneziaWG.Name = "AmneziaWG"
+AmneziaWG.DiskDesc = "AmneziaWG Driver Install Disk"
+AmneziaWG.DeviceDesc = "AmneziaWG Tunnel"
+AmneziaWG.CompanyName = "WireGuard LLC"

@@ -106,7 +106,7 @@ RegistryQueryString(HKEY Key, LPCWSTR Name, BOOL Log)
     default: {
         WCHAR RegPath[MAX_REG_PATH];
         LoggerGetRegistryKeyPath(Key, RegPath);
-        LOG(WIREGUARD_LOG_ERR,
+        LOG(AMNEZIAWG_LOG_ERR,
             L"Registry value %.*s\\%s is not a string (type: %u)",
             MAX_REG_PATH,
             RegPath,
@@ -141,7 +141,7 @@ RegistryQueryDWORD(HKEY Key, LPCWSTR Name, DWORD *Value, BOOL Log)
     {
         WCHAR RegPath[MAX_REG_PATH];
         LoggerGetRegistryKeyPath(Key, RegPath);
-        LOG(WIREGUARD_LOG_ERR, L"Value %.*s\\%s is not a DWORD (type: %u)", MAX_REG_PATH, RegPath, Name, ValueType);
+        LOG(AMNEZIAWG_LOG_ERR, L"Value %.*s\\%s is not a DWORD (type: %u)", MAX_REG_PATH, RegPath, Name, ValueType);
         SetLastError(ERROR_INVALID_DATATYPE);
         return FALSE;
     }
@@ -149,7 +149,7 @@ RegistryQueryDWORD(HKEY Key, LPCWSTR Name, DWORD *Value, BOOL Log)
     {
         WCHAR RegPath[MAX_REG_PATH];
         LoggerGetRegistryKeyPath(Key, RegPath);
-        LOG(WIREGUARD_LOG_ERR, L"Value %.*s\\%s size is not 4 bytes (size: %u)", MAX_REG_PATH, RegPath, Name, Size);
+        LOG(AMNEZIAWG_LOG_ERR, L"Value %.*s\\%s size is not 4 bytes (size: %u)", MAX_REG_PATH, RegPath, Name, Size);
         SetLastError(ERROR_INVALID_DATA);
         return FALSE;
     }

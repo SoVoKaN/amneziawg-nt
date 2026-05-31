@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #include "device.h"
@@ -21,23 +22,23 @@
         _B)
 
 static_assert(
-    SIZE_OF_EMBEDDED(WG_IOCTL_INTERFACE, WG_IOCTL_PEER) == (sizeof(WG_IOCTL_INTERFACE)),
+    SIZE_OF_EMBEDDED(AWG_IOCTL_INTERFACE, AWG_IOCTL_PEER) == (sizeof(AWG_IOCTL_INTERFACE)),
     "Non-symmetric interface stacking");
 static_assert(
-    SIZE_OF_EMBEDDED(WG_IOCTL_PEER, WG_IOCTL_ALLOWED_IP) == SIZE_OF_EMBEDDED(WG_IOCTL_PEER, WG_IOCTL_INTERFACE),
+    SIZE_OF_EMBEDDED(AWG_IOCTL_PEER, AWG_IOCTL_ALLOWED_IP) == SIZE_OF_EMBEDDED(AWG_IOCTL_PEER, AWG_IOCTL_INTERFACE),
     "Non-symmetric peer stacking");
 static_assert(
-    SIZE_OF_EMBEDDED(WG_IOCTL_PEER, WG_IOCTL_ALLOWED_IP) == (sizeof(WG_IOCTL_PEER)),
+    SIZE_OF_EMBEDDED(AWG_IOCTL_PEER, AWG_IOCTL_ALLOWED_IP) == (sizeof(AWG_IOCTL_PEER)),
     "Non-symmetric peer stacking");
-static_assert(SIZE_OF_EMBEDDED(WG_IOCTL_PEER, WG_IOCTL_PEER) == (sizeof(WG_IOCTL_PEER)), "Non-symmetric peer stacking");
+static_assert(SIZE_OF_EMBEDDED(AWG_IOCTL_PEER, AWG_IOCTL_PEER) == (sizeof(AWG_IOCTL_PEER)), "Non-symmetric peer stacking");
 static_assert(
-    SIZE_OF_EMBEDDED(WG_IOCTL_ALLOWED_IP, WG_IOCTL_ALLOWED_IP) == SIZE_OF_EMBEDDED(WG_IOCTL_ALLOWED_IP, WG_IOCTL_PEER),
+    SIZE_OF_EMBEDDED(AWG_IOCTL_ALLOWED_IP, AWG_IOCTL_ALLOWED_IP) == SIZE_OF_EMBEDDED(AWG_IOCTL_ALLOWED_IP, AWG_IOCTL_PEER),
     "Non-symmetric allowed IP stacking");
 static_assert(
-    SIZE_OF_EMBEDDED(WG_IOCTL_ALLOWED_IP, WG_IOCTL_PEER) == (sizeof(WG_IOCTL_ALLOWED_IP)),
+    SIZE_OF_EMBEDDED(AWG_IOCTL_ALLOWED_IP, AWG_IOCTL_PEER) == (sizeof(AWG_IOCTL_ALLOWED_IP)),
     "Non-symmetric allowed IP stacking");
 static_assert(
-    SIZE_OF_EMBEDDED(WG_IOCTL_ALLOWED_IP, WG_IOCTL_ALLOWED_IP) == (sizeof(WG_IOCTL_ALLOWED_IP)),
+    SIZE_OF_EMBEDDED(AWG_IOCTL_ALLOWED_IP, AWG_IOCTL_ALLOWED_IP) == (sizeof(AWG_IOCTL_ALLOWED_IP)),
     "Non-symmetric allowed IP stacking");
 
 #undef SIZE_OF_EMBEDDED
@@ -82,7 +83,7 @@ HasAccess(_In_ ACCESS_MASK DesiredAccess, _In_ KPROCESSOR_MODE AccessMode, _Out_
     return HasAccess;
 }
 
-static WG_DEVICE *
+static AWG_DEVICE *
 WgDeviceFromFdo(_In_ DEVICE_OBJECT *DeviceObject)
 {
     if (DeviceObject->DeviceType != FILE_DEVICE_PHYSICAL_NETCARD || !DeviceObject->DeviceExtension)
@@ -98,7 +99,7 @@ Get(_In_ DEVICE_OBJECT *DeviceObject, _Inout_ IRP *Irp)
     if (!HasAccess(FILE_READ_DATA, Irp->RequestorMode, &Irp->IoStatus.Status))
         return;
 
-    WG_IOCTL_INTERFACE *IoctlInterface = NULL;
+    AWG_IOCTL_INTERFACE *IoctlInterface = NULL;
     if (Irp->MdlAddress)
     {
         IoctlInterface = MmGetSystemAddressForMdlSafe(Irp->MdlAddress, NormalPagePriority | MdlMappingNoExecute);
@@ -109,7 +110,7 @@ Get(_In_ DEVICE_OBJECT *DeviceObject, _Inout_ IRP *Irp)
         }
     }
 
-    WG_DEVICE *Wg = WgDeviceFromFdo(DeviceObject);
+    AWG_DEVICE *Wg = WgDeviceFromFdo(DeviceObject);
     if (!Wg || ReadBooleanNoFence(&Wg->IsDeviceRemoving))
     {
         Irp->IoStatus.Status = NDIS_STATUS_ADAPTER_REMOVED;
@@ -119,7 +120,7 @@ Get(_In_ DEVICE_OBJECT *DeviceObject, _Inout_ IRP *Irp)
     MuAcquirePushLockExclusive(&Wg->DeviceUpdateLock);
 
     ULONG OutSize = IoctlInterface ? MmGetMdlByteCount(Irp->MdlAddress) : 0;
-    ULONG64 FinalSize = sizeof(WG_IOCTL_INTERFACE);
+    ULONG64 FinalSize = sizeof(AWG_IOCTL_INTERFACE);
     if (OutSize >= FinalSize)
     {
         IoctlInterface->Flags = 0;
@@ -127,27 +128,27 @@ Get(_In_ DEVICE_OBJECT *DeviceObject, _Inout_ IRP *Irp)
         if (Wg->IncomingPort != 0)
         {
             IoctlInterface->ListenPort = Wg->IncomingPort;
-            IoctlInterface->Flags |= WG_IOCTL_INTERFACE_HAS_LISTEN_PORT;
+            IoctlInterface->Flags |= AWG_IOCTL_INTERFACE_HAS_LISTEN_PORT;
         }
         MuAcquirePushLockShared(&Wg->StaticIdentity.Lock);
         if (Wg->StaticIdentity.HasIdentity)
         {
             RtlCopyMemory(IoctlInterface->PrivateKey, Wg->StaticIdentity.StaticPrivate, NOISE_PUBLIC_KEY_LEN);
             RtlCopyMemory(IoctlInterface->PublicKey, Wg->StaticIdentity.StaticPublic, NOISE_PUBLIC_KEY_LEN);
-            IoctlInterface->Flags |= WG_IOCTL_INTERFACE_HAS_PUBLIC_KEY | WG_IOCTL_INTERFACE_HAS_PRIVATE_KEY;
+            IoctlInterface->Flags |= AWG_IOCTL_INTERFACE_HAS_PUBLIC_KEY | AWG_IOCTL_INTERFACE_HAS_PRIVATE_KEY;
         }
         MuReleasePushLockShared(&Wg->StaticIdentity.Lock);
     }
 
-    WG_IOCTL_PEER *IoctlPeer = (WG_IOCTL_PEER *)((UCHAR *)IoctlInterface + sizeof(WG_IOCTL_INTERFACE));
-    WG_PEER *Peer;
+    AWG_IOCTL_PEER *IoctlPeer = (AWG_IOCTL_PEER *)((UCHAR *)IoctlInterface + sizeof(AWG_IOCTL_INTERFACE));
+    AWG_PEER *Peer;
     LIST_FOR_EACH_ENTRY (Peer, &Wg->PeerList, PeerList)
     {
-        FinalSize += sizeof(WG_IOCTL_PEER);
+        FinalSize += sizeof(AWG_IOCTL_PEER);
         if (OutSize >= FinalSize)
         {
             ++IoctlInterface->PeersCount;
-            IoctlPeer->Flags = WG_IOCTL_PEER_HAS_PERSISTENT_KEEPALIVE;
+            IoctlPeer->Flags = AWG_IOCTL_PEER_HAS_PERSISTENT_KEEPALIVE;
             IoctlPeer->ProtocolVersion = 1;
             IoctlPeer->PersistentKeepalive = Peer->PersistentKeepaliveInterval;
             IoctlPeer->RxBytes = Peer->RxBytes;
@@ -156,11 +157,11 @@ Get(_In_ DEVICE_OBJECT *DeviceObject, _Inout_ IRP *Irp)
             IoctlPeer->AllowedIPsCount = 0;
             MuAcquirePushLockShared(&Peer->Handshake.Lock);
             RtlCopyMemory(IoctlPeer->PublicKey, Peer->Handshake.RemoteStatic, NOISE_PUBLIC_KEY_LEN);
-            IoctlPeer->Flags |= WG_IOCTL_PEER_HAS_PUBLIC_KEY;
+            IoctlPeer->Flags |= AWG_IOCTL_PEER_HAS_PUBLIC_KEY;
             if (!CryptoIsZero32(Peer->Handshake.PresharedKey))
             {
                 RtlCopyMemory(IoctlPeer->PresharedKey, Peer->Handshake.PresharedKey, NOISE_SYMMETRIC_KEY_LEN);
-                IoctlPeer->Flags |= WG_IOCTL_PEER_HAS_PRESHARED_KEY;
+                IoctlPeer->Flags |= AWG_IOCTL_PEER_HAS_PRESHARED_KEY;
             }
             MuReleasePushLockShared(&Peer->Handshake.Lock);
             KIRQL Irql;
@@ -168,24 +169,24 @@ Get(_In_ DEVICE_OBJECT *DeviceObject, _Inout_ IRP *Irp)
             if (Peer->Endpoint.Addr.si_family == AF_INET)
             {
                 IoctlPeer->Endpoint.Ipv4 = Peer->Endpoint.Addr.Ipv4;
-                IoctlPeer->Flags |= WG_IOCTL_PEER_HAS_ENDPOINT;
+                IoctlPeer->Flags |= AWG_IOCTL_PEER_HAS_ENDPOINT;
             }
             else if (Peer->Endpoint.Addr.si_family == AF_INET6)
             {
                 IoctlPeer->Endpoint.Ipv6 = Peer->Endpoint.Addr.Ipv6;
-                IoctlPeer->Flags |= WG_IOCTL_PEER_HAS_ENDPOINT;
+                IoctlPeer->Flags |= AWG_IOCTL_PEER_HAS_ENDPOINT;
             }
             ExReleaseSpinLockShared(&Peer->EndpointLock, Irql);
         }
 
-        WG_IOCTL_ALLOWED_IP *IoctlAllowedIp = (WG_IOCTL_ALLOWED_IP *)((UCHAR *)IoctlPeer + sizeof(WG_IOCTL_PEER));
+        AWG_IOCTL_ALLOWED_IP *IoctlAllowedIp = (AWG_IOCTL_ALLOWED_IP *)((UCHAR *)IoctlPeer + sizeof(AWG_IOCTL_PEER));
         ALLOWEDIPS_NODE *AllowedIpsNode;
         ULONG AllowedIpsLimit = MAXULONG;
         LIST_FOR_EACH_ENTRY (AllowedIpsNode, &Peer->AllowedIpsList, PeerList)
         {
             if (!(--AllowedIpsLimit))
                 break;
-            FinalSize += sizeof(WG_IOCTL_ALLOWED_IP);
+            FinalSize += sizeof(AWG_IOCTL_ALLOWED_IP);
             if (OutSize >= FinalSize)
             {
                 ++IoctlPeer->AllowedIPsCount;
@@ -195,7 +196,7 @@ Get(_In_ DEVICE_OBJECT *DeviceObject, _Inout_ IRP *Irp)
             }
             ++IoctlAllowedIp;
         }
-        IoctlPeer = (WG_IOCTL_PEER *)IoctlAllowedIp;
+        IoctlPeer = (AWG_IOCTL_PEER *)IoctlAllowedIp;
     }
     MuReleasePushLockExclusive(&Wg->DeviceUpdateLock);
 
@@ -209,11 +210,11 @@ _IRQL_requires_max_(PASSIVE_LEVEL)
 _Requires_lock_held_(Wg->DeviceUpdateLock)
 _Must_inspect_result_
 static NTSTATUS
-SetListenPort(_Inout_ WG_DEVICE *Wg, _In_ USHORT ListenPort)
+SetListenPort(_Inout_ AWG_DEVICE *Wg, _In_ USHORT ListenPort)
 {
     if (Wg->IncomingPort == ListenPort)
         return STATUS_SUCCESS;
-    WG_PEER *Peer;
+    AWG_PEER *Peer;
     LIST_FOR_EACH_ENTRY (Peer, &Wg->PeerList, PeerList)
         SocketClearPeerEndpointSrc(Peer);
     if (ReadBooleanNoFence(&Wg->IsUp))
@@ -225,11 +226,11 @@ SetListenPort(_Inout_ WG_DEVICE *Wg, _In_ USHORT ListenPort)
 _Requires_lock_held_(Wg->DeviceUpdateLock)
 _Must_inspect_result_
 static NTSTATUS
-SetPrivateKey(_Inout_ WG_DEVICE *Wg, _In_ CONST UCHAR PrivateKey[WG_KEY_LEN])
+SetPrivateKey(_Inout_ AWG_DEVICE *Wg, _In_ CONST UCHAR PrivateKey[AWG_KEY_LEN])
 {
     UINT8 PublicKey[NOISE_PUBLIC_KEY_LEN];
     BOOLEAN SendStagedPackets;
-    WG_PEER *Peer, *Temp;
+    AWG_PEER *Peer, *Temp;
 
     if (CryptoEqualMemory32(Wg->StaticIdentity.StaticPrivate, PrivateKey))
         return STATUS_SUCCESS;
@@ -267,43 +268,43 @@ SetPrivateKey(_Inout_ WG_DEVICE *Wg, _In_ CONST UCHAR PrivateKey[WG_KEY_LEN])
 _Requires_lock_held_(Wg->DeviceUpdateLock)
 _Must_inspect_result_
 static NTSTATUS
-SetPeer(_Inout_ WG_DEVICE *Wg, _Inout_ CONST volatile WG_IOCTL_PEER **UnsafeIoctlPeerPtr, _Inout_ ULONG *RemainingSize)
+SetPeer(_Inout_ AWG_DEVICE *Wg, _Inout_ CONST volatile AWG_IOCTL_PEER **UnsafeIoctlPeerPtr, _Inout_ ULONG *RemainingSize)
 {
-    if (*RemainingSize < sizeof(WG_IOCTL_PEER))
+    if (*RemainingSize < sizeof(AWG_IOCTL_PEER))
         return STATUS_INVALID_PARAMETER;
-    *RemainingSize -= sizeof(WG_IOCTL_PEER);
+    *RemainingSize -= sizeof(AWG_IOCTL_PEER);
 
-    CONST volatile WG_IOCTL_PEER *UnsafeIoctlPeer = *UnsafeIoctlPeerPtr;
-    WG_IOCTL_PEER IoctlPeer = *UnsafeIoctlPeer;
+    CONST volatile AWG_IOCTL_PEER *UnsafeIoctlPeer = *UnsafeIoctlPeerPtr;
+    AWG_IOCTL_PEER IoctlPeer = *UnsafeIoctlPeer;
 
     NTSTATUS Status = STATUS_INVALID_PARAMETER;
-    if (!(IoctlPeer.Flags & WG_IOCTL_PEER_HAS_PUBLIC_KEY))
+    if (!(IoctlPeer.Flags & AWG_IOCTL_PEER_HAS_PUBLIC_KEY))
         goto cleanupStack;
     Status = STATUS_NOT_IMPLEMENTED;
-    if ((IoctlPeer.Flags & WG_IOCTL_PEER_HAS_PROTOCOL_VERSION) && IoctlPeer.ProtocolVersion != 0 &&
+    if ((IoctlPeer.Flags & AWG_IOCTL_PEER_HAS_PROTOCOL_VERSION) && IoctlPeer.ProtocolVersion != 0 &&
         IoctlPeer.ProtocolVersion > 1)
         goto cleanupStack;
     Status = STATUS_INVALID_PARAMETER;
     ULONG AllowedIPsSize;
-    if (!NT_SUCCESS(RtlULongMult(IoctlPeer.AllowedIPsCount, sizeof(WG_IOCTL_ALLOWED_IP), &AllowedIPsSize)))
+    if (!NT_SUCCESS(RtlULongMult(IoctlPeer.AllowedIPsCount, sizeof(AWG_IOCTL_ALLOWED_IP), &AllowedIPsSize)))
         goto cleanupStack;
     if (*RemainingSize < AllowedIPsSize)
         goto cleanupStack;
     *RemainingSize -= AllowedIPsSize;
-    CONST volatile WG_IOCTL_ALLOWED_IP *UnsafeIoctlAllowedIp =
-        (CONST volatile WG_IOCTL_ALLOWED_IP *)((UCHAR *)UnsafeIoctlPeer + sizeof(WG_IOCTL_PEER));
-    *UnsafeIoctlPeerPtr = (CONST WG_IOCTL_PEER *)((UCHAR *)UnsafeIoctlAllowedIp + AllowedIPsSize);
+    CONST volatile AWG_IOCTL_ALLOWED_IP *UnsafeIoctlAllowedIp =
+        (CONST volatile AWG_IOCTL_ALLOWED_IP *)((UCHAR *)UnsafeIoctlPeer + sizeof(AWG_IOCTL_PEER));
+    *UnsafeIoctlPeerPtr = (CONST AWG_IOCTL_PEER *)((UCHAR *)UnsafeIoctlAllowedIp + AllowedIPsSize);
 
     Status = STATUS_SUCCESS;
-    WG_PEER *Peer = PubkeyHashtableLookup(Wg->PeerHashtable, IoctlPeer.PublicKey);
+    AWG_PEER *Peer = PubkeyHashtableLookup(Wg->PeerHashtable, IoctlPeer.PublicKey);
     if (!Peer)
     {
         /* Peer doesn't exist yet. Add a new one. */
-        if (IoctlPeer.Flags & (WG_IOCTL_PEER_REMOVE | WG_IOCTL_PEER_UPDATE_ONLY))
+        if (IoctlPeer.Flags & (AWG_IOCTL_PEER_REMOVE | AWG_IOCTL_PEER_UPDATE_ONLY))
             goto cleanupStack;
 
         /* The peer is new, so there aren't allowed IPs to remove. */
-        IoctlPeer.Flags &= ~WG_IOCTL_PEER_REPLACE_ALLOWED_IPS;
+        IoctlPeer.Flags &= ~AWG_IOCTL_PEER_REPLACE_ALLOWED_IPS;
 
         MuAcquirePushLockShared(&Wg->StaticIdentity.Lock);
         if (Wg->StaticIdentity.HasIdentity &&
@@ -319,7 +320,7 @@ SetPeer(_Inout_ WG_DEVICE *Wg, _Inout_ CONST volatile WG_IOCTL_PEER **UnsafeIoct
         Status = PeerCreate(
             Wg,
             IoctlPeer.PublicKey,
-            (IoctlPeer.Flags & WG_IOCTL_PEER_HAS_PRESHARED_KEY) ? IoctlPeer.PresharedKey : NULL,
+            (IoctlPeer.Flags & AWG_IOCTL_PEER_HAS_PRESHARED_KEY) ? IoctlPeer.PresharedKey : NULL,
             &Peer);
         if (!NT_SUCCESS(Status))
             goto cleanupStack;
@@ -327,7 +328,7 @@ SetPeer(_Inout_ WG_DEVICE *Wg, _Inout_ CONST volatile WG_IOCTL_PEER **UnsafeIoct
         PeerGet(Peer);
     }
 
-    if (IoctlPeer.Flags & WG_IOCTL_PEER_REMOVE)
+    if (IoctlPeer.Flags & AWG_IOCTL_PEER_REMOVE)
     {
         _Analysis_assume_same_lock_(Peer->Device->DeviceUpdateLock, Wg->DeviceUpdateLock);
         PeerRemove(Peer);
@@ -335,14 +336,14 @@ SetPeer(_Inout_ WG_DEVICE *Wg, _Inout_ CONST volatile WG_IOCTL_PEER **UnsafeIoct
         goto cleanupPeer;
     }
 
-    if (IoctlPeer.Flags & WG_IOCTL_PEER_HAS_PRESHARED_KEY)
+    if (IoctlPeer.Flags & AWG_IOCTL_PEER_HAS_PRESHARED_KEY)
     {
         MuAcquirePushLockExclusive(&Peer->Handshake.Lock);
         RtlCopyMemory(&Peer->Handshake.PresharedKey, IoctlPeer.PresharedKey, NOISE_SYMMETRIC_KEY_LEN);
         MuReleasePushLockExclusive(&Peer->Handshake.Lock);
     }
 
-    if (IoctlPeer.Flags & WG_IOCTL_PEER_HAS_ENDPOINT)
+    if (IoctlPeer.Flags & AWG_IOCTL_PEER_HAS_ENDPOINT)
     {
         SIZE_T Size;
         if ((Size = sizeof(SOCKADDR_IN), IoctlPeer.Endpoint.si_family == AF_INET) ||
@@ -354,15 +355,15 @@ SetPeer(_Inout_ WG_DEVICE *Wg, _Inout_ CONST volatile WG_IOCTL_PEER **UnsafeIoct
         }
     }
 
-    if (IoctlPeer.Flags & WG_IOCTL_PEER_REPLACE_ALLOWED_IPS)
+    if (IoctlPeer.Flags & AWG_IOCTL_PEER_REPLACE_ALLOWED_IPS)
         AllowedIpsRemoveByPeer(&Wg->PeerAllowedIps, Peer, &Wg->DeviceUpdateLock);
 
     for (ULONG i = 0; i < IoctlPeer.AllowedIPsCount; ++i)
     {
-        WG_IOCTL_ALLOWED_IP IoctlAllowedIp = UnsafeIoctlAllowedIp[i];
+        AWG_IOCTL_ALLOWED_IP IoctlAllowedIp = UnsafeIoctlAllowedIp[i];
         if (IoctlAllowedIp.AddressFamily == AF_INET && IoctlAllowedIp.Cidr <= 32)
         {
-            if (IoctlAllowedIp.Flags & WG_IOCTL_ALLOWED_IP_REMOVE)
+            if (IoctlAllowedIp.Flags & AWG_IOCTL_ALLOWED_IP_REMOVE)
                 Status = AllowedIpsRemoveV4(
                     &Peer->Device->PeerAllowedIps,
                     &IoctlAllowedIp.Address.V4,
@@ -379,7 +380,7 @@ SetPeer(_Inout_ WG_DEVICE *Wg, _Inout_ CONST volatile WG_IOCTL_PEER **UnsafeIoct
         }
         else if (IoctlAllowedIp.AddressFamily == AF_INET6 && IoctlAllowedIp.Cidr <= 128)
         {
-            if (IoctlAllowedIp.Flags & WG_IOCTL_ALLOWED_IP_REMOVE)
+            if (IoctlAllowedIp.Flags & AWG_IOCTL_ALLOWED_IP_REMOVE)
                 Status = AllowedIpsRemoveV6(
                     &Peer->Device->PeerAllowedIps,
                     &IoctlAllowedIp.Address.V6,
@@ -401,7 +402,7 @@ SetPeer(_Inout_ WG_DEVICE *Wg, _Inout_ CONST volatile WG_IOCTL_PEER **UnsafeIoct
     }
 
     BOOLEAN IsUp = ReadBooleanNoFence(&Wg->IsUp);
-    if (IoctlPeer.Flags & WG_IOCTL_PEER_HAS_PERSISTENT_KEEPALIVE)
+    if (IoctlPeer.Flags & AWG_IOCTL_PEER_HAS_PERSISTENT_KEEPALIVE)
     {
         CONST BOOLEAN SendKeepalive = !Peer->PersistentKeepaliveInterval && IoctlPeer.PersistentKeepalive && IsUp;
         Peer->PersistentKeepaliveInterval = IoctlPeer.PersistentKeepalive;
@@ -423,38 +424,38 @@ cleanupStack:
 _IRQL_requires_max_(PASSIVE_LEVEL)
 static NTSTATUS
 SetInterface(
-    _Inout_ WG_DEVICE *Wg,
-    _In_ CONST volatile WG_IOCTL_INTERFACE *UnsafeIoctlInterface,
+    _Inout_ AWG_DEVICE *Wg,
+    _In_ CONST volatile AWG_IOCTL_INTERFACE *UnsafeIoctlInterface,
     _Inout_ ULONG *RemainingSize)
 {
-    if (*RemainingSize < sizeof(WG_IOCTL_INTERFACE))
+    if (*RemainingSize < sizeof(AWG_IOCTL_INTERFACE))
         return STATUS_INVALID_PARAMETER;
-    *RemainingSize = *RemainingSize - sizeof(WG_IOCTL_INTERFACE);
+    *RemainingSize = *RemainingSize - sizeof(AWG_IOCTL_INTERFACE);
 
-    WG_IOCTL_INTERFACE IoctlInterface = *UnsafeIoctlInterface;
+    AWG_IOCTL_INTERFACE IoctlInterface = *UnsafeIoctlInterface;
 
     MuAcquirePushLockExclusive(&Wg->DeviceUpdateLock);
 
     NTSTATUS Status;
-    if (IoctlInterface.Flags & WG_IOCTL_INTERFACE_HAS_LISTEN_PORT)
+    if (IoctlInterface.Flags & AWG_IOCTL_INTERFACE_HAS_LISTEN_PORT)
     {
         Status = SetListenPort(Wg, IoctlInterface.ListenPort);
         if (!NT_SUCCESS(Status))
             goto cleanupLock;
     }
 
-    if (IoctlInterface.Flags & WG_IOCTL_INTERFACE_REPLACE_PEERS)
+    if (IoctlInterface.Flags & AWG_IOCTL_INTERFACE_REPLACE_PEERS)
         PeerRemoveAll(Wg);
 
-    if (IoctlInterface.Flags & WG_IOCTL_INTERFACE_HAS_PRIVATE_KEY)
+    if (IoctlInterface.Flags & AWG_IOCTL_INTERFACE_HAS_PRIVATE_KEY)
     {
         Status = SetPrivateKey(Wg, IoctlInterface.PrivateKey);
         if (!NT_SUCCESS(Status))
             goto cleanupLock;
     }
 
-    CONST volatile WG_IOCTL_PEER *UnsafeIoctlPeer =
-        (CONST volatile WG_IOCTL_PEER *)((UCHAR *)UnsafeIoctlInterface + sizeof(WG_IOCTL_INTERFACE));
+    CONST volatile AWG_IOCTL_PEER *UnsafeIoctlPeer =
+        (CONST volatile AWG_IOCTL_PEER *)((UCHAR *)UnsafeIoctlInterface + sizeof(AWG_IOCTL_INTERFACE));
     for (ULONG i = 0; i < IoctlInterface.PeersCount; ++i)
     {
         Status = SetPeer(Wg, &UnsafeIoctlPeer, RemainingSize);
@@ -482,7 +483,7 @@ Set(_In_ DEVICE_OBJECT *DeviceObject, _Inout_ IRP *Irp)
         Irp->IoStatus.Status = STATUS_INVALID_PARAMETER;
         return;
     }
-    CONST volatile WG_IOCTL_INTERFACE *UnsafeIoctlInterface =
+    CONST volatile AWG_IOCTL_INTERFACE *UnsafeIoctlInterface =
         MmGetSystemAddressForMdlSafe(Irp->MdlAddress, NormalPagePriority | MdlMappingNoExecute | MdlMappingNoWrite);
     if (!UnsafeIoctlInterface)
     {
@@ -490,7 +491,7 @@ Set(_In_ DEVICE_OBJECT *DeviceObject, _Inout_ IRP *Irp)
         return;
     }
 
-    WG_DEVICE *Wg = WgDeviceFromFdo(DeviceObject);
+    AWG_DEVICE *Wg = WgDeviceFromFdo(DeviceObject);
     if (!Wg || ReadBooleanNoFence(&Wg->IsDeviceRemoving))
     {
         Irp->IoStatus.Status = NDIS_STATUS_ADAPTER_REMOVED;
@@ -506,7 +507,7 @@ Set(_In_ DEVICE_OBJECT *DeviceObject, _Inout_ IRP *Irp)
 _IRQL_requires_max_(PASSIVE_LEVEL)
 _Requires_lock_held_(&Wg->DeviceUpdateLock)
 static NTSTATUS
-Up(_Inout_ WG_DEVICE *Wg)
+Up(_Inout_ AWG_DEVICE *Wg)
 {
     if (ReadBooleanNoFence(&Wg->IsUp))
         return STATUS_ALREADY_COMPLETE;
@@ -534,7 +535,7 @@ Up(_Inout_ WG_DEVICE *Wg)
 _IRQL_requires_max_(PASSIVE_LEVEL)
 _Requires_lock_held_(&Wg->DeviceUpdateLock)
 static NTSTATUS
-Down(_Inout_ WG_DEVICE *Wg)
+Down(_Inout_ AWG_DEVICE *Wg)
 {
     if (!ReadBooleanNoFence(&Wg->IsUp))
         return STATUS_ALREADY_COMPLETE;
@@ -560,15 +561,15 @@ AdapterState(_In_ DEVICE_OBJECT *DeviceObject, _Inout_ IRP *Irp)
     if (!HasAccess(FILE_WRITE_DATA, Irp->RequestorMode, &Irp->IoStatus.Status))
         return;
     IO_STACK_LOCATION *Stack = IoGetCurrentIrpStackLocation(Irp);
-    if (Stack->Parameters.DeviceIoControl.InputBufferLength != sizeof(WG_IOCTL_ADAPTER_STATE))
+    if (Stack->Parameters.DeviceIoControl.InputBufferLength != sizeof(AWG_IOCTL_ADAPTER_STATE))
     {
         Irp->IoStatus.Status = STATUS_INVALID_PARAMETER;
         return;
     }
-    WG_IOCTL_ADAPTER_STATE Op;
+    AWG_IOCTL_ADAPTER_STATE Op;
     RtlCopyMemory(&Op, Irp->AssociatedIrp.SystemBuffer, sizeof(Op));
 
-    WG_DEVICE *Wg = WgDeviceFromFdo(DeviceObject);
+    AWG_DEVICE *Wg = WgDeviceFromFdo(DeviceObject);
     if (!Wg || ReadBooleanNoFence(&Wg->IsDeviceRemoving))
     {
         Irp->IoStatus.Status = NDIS_STATUS_ADAPTER_REMOVED;
@@ -577,20 +578,20 @@ AdapterState(_In_ DEVICE_OBJECT *DeviceObject, _Inout_ IRP *Irp)
     MuAcquirePushLockExclusive(&Wg->DeviceUpdateLock);
     switch (Op)
     {
-    case WG_IOCTL_ADAPTER_STATE_QUERY:
+    case AWG_IOCTL_ADAPTER_STATE_QUERY:
         if (Stack->Parameters.DeviceIoControl.OutputBufferLength == sizeof(Op))
         {
-            Op = ReadBooleanNoFence(&Wg->IsUp) ? WG_IOCTL_ADAPTER_STATE_UP : WG_IOCTL_ADAPTER_STATE_DOWN;
+            Op = ReadBooleanNoFence(&Wg->IsUp) ? AWG_IOCTL_ADAPTER_STATE_UP : AWG_IOCTL_ADAPTER_STATE_DOWN;
             RtlCopyMemory(Irp->AssociatedIrp.SystemBuffer, &Op, sizeof(Op));
             Irp->IoStatus.Information = sizeof(Op);
         }
         else
             Irp->IoStatus.Status = STATUS_INVALID_PARAMETER;
         break;
-    case WG_IOCTL_ADAPTER_STATE_DOWN:
+    case AWG_IOCTL_ADAPTER_STATE_DOWN:
         Irp->IoStatus.Status = Down(Wg);
         break;
-    case WG_IOCTL_ADAPTER_STATE_UP:
+    case AWG_IOCTL_ADAPTER_STATE_UP:
         Irp->IoStatus.Status = Up(Wg);
         break;
     default:
@@ -607,7 +608,7 @@ ReadLogLine(_In_ DEVICE_OBJECT *DeviceObject, _Inout_ IRP *Irp)
     if (!HasAccess(FILE_READ_DATA, Irp->RequestorMode, &Irp->IoStatus.Status))
         return;
 
-    WG_DEVICE *Wg = WgDeviceFromFdo(DeviceObject);
+    AWG_DEVICE *Wg = WgDeviceFromFdo(DeviceObject);
     if (!Wg || ReadBooleanNoFence(&Wg->IsDeviceRemoving))
     {
         Irp->IoStatus.Status = NDIS_STATUS_ADAPTER_REMOVED;
@@ -615,14 +616,14 @@ ReadLogLine(_In_ DEVICE_OBJECT *DeviceObject, _Inout_ IRP *Irp)
     }
 
     IO_STACK_LOCATION *Stack = IoGetCurrentIrpStackLocation(Irp);
-    if (Stack->Parameters.DeviceIoControl.OutputBufferLength < sizeof(WG_IOCTL_LOG_ENTRY))
+    if (Stack->Parameters.DeviceIoControl.OutputBufferLength < sizeof(AWG_IOCTL_LOG_ENTRY))
     {
         Irp->IoStatus.Status = STATUS_BUFFER_TOO_SMALL;
         return;
     }
     Irp->IoStatus.Status = LogRingRead(&Wg->Log, Irp->AssociatedIrp.SystemBuffer, &Wg->IsDeviceRemoving);
     if (NT_SUCCESS(Irp->IoStatus.Status))
-        Irp->IoStatus.Information = sizeof(WG_IOCTL_LOG_ENTRY);
+        Irp->IoStatus.Information = sizeof(AWG_IOCTL_LOG_ENTRY);
 }
 
 _Dispatch_type_(IRP_MJ_DEVICE_CONTROL)
@@ -634,16 +635,16 @@ DispatchDeviceControl(DEVICE_OBJECT *DeviceObject, IRP *Irp)
     IO_STACK_LOCATION *Stack = IoGetCurrentIrpStackLocation(Irp);
     switch (Stack->Parameters.DeviceIoControl.IoControlCode)
     {
-    case WG_IOCTL_GET:
+    case AWG_IOCTL_GET:
         Get(DeviceObject, Irp);
         break;
-    case WG_IOCTL_SET:
+    case AWG_IOCTL_SET:
         Set(DeviceObject, Irp);
         break;
-    case WG_IOCTL_SET_ADAPTER_STATE:
+    case AWG_IOCTL_SET_ADAPTER_STATE:
         AdapterState(DeviceObject, Irp);
         break;
-    case WG_IOCTL_READ_LOG_LINE:
+    case AWG_IOCTL_READ_LOG_LINE:
         ReadLogLine(DeviceObject, Irp);
         break;
     default:
@@ -660,7 +661,7 @@ _Use_decl_annotations_
 static NTSTATUS
 DispatchCreate(DEVICE_OBJECT *DeviceObject, IRP *Irp)
 {
-    WG_DEVICE *Wg = WgDeviceFromFdo(DeviceObject);
+    AWG_DEVICE *Wg = WgDeviceFromFdo(DeviceObject);
     if (Wg && ReadBooleanNoFence(&Wg->IsDeviceRemoving))
     {
         Irp->IoStatus.Status = NDIS_STATUS_ADAPTER_REMOVED;
@@ -680,7 +681,7 @@ DispatchPnp(DEVICE_OBJECT *DeviceObject, IRP *Irp)
     if (Stack->MinorFunction != IRP_MN_QUERY_REMOVE_DEVICE && Stack->MinorFunction != IRP_MN_SURPRISE_REMOVAL)
         goto ndisDispatch;
 
-    WG_DEVICE *Wg = WgDeviceFromFdo(DeviceObject);
+    AWG_DEVICE *Wg = WgDeviceFromFdo(DeviceObject);
     if (!Wg)
         goto ndisDispatch;
     WriteBooleanNoFence(&Wg->IsDeviceRemoving, TRUE);

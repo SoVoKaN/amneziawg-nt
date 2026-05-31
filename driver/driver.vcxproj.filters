@@ -86,12 +86,12 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="wireguard.rc">
+    <ResourceCompile Include="amneziawg.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <Inf Include="wireguard.inf">
+    <Inf Include="amneziawg.inf">
       <Filter>Source Files</Filter>
     </Inf>
   </ItemGroup>

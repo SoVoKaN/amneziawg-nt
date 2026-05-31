@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #include "interlocked.h"
@@ -15,7 +16,7 @@
 #include "logging.h"
 
 static VOID
-UpdateRxStats(_Inout_ WG_PEER *Peer, _In_ CONST ULONG Len)
+UpdateRxStats(_Inout_ AWG_PEER *Peer, _In_ CONST ULONG Len)
 {
     Peer->RxBytes += Len;
     Peer->Device->Statistics.ifHCInOctets += Len;
@@ -27,10 +28,10 @@ UpdateRxStats(_Inout_ WG_PEER *Peer, _In_ CONST ULONG Len)
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 static VOID
-ReceiveHandshakePacket(_Inout_ WG_DEVICE *Wg, _In_ NET_BUFFER_LIST *Nbl)
+ReceiveHandshakePacket(_Inout_ AWG_DEVICE *Wg, _In_ NET_BUFFER_LIST *Nbl)
 {
     COOKIE_MAC_STATE MacState;
-    WG_PEER *Peer = NULL;
+    AWG_PEER *Peer = NULL;
     /* This is global, so that our load calculation applies to the whole
      * system. We don't care about races with it at all.
      */
@@ -146,7 +147,7 @@ _Use_decl_annotations_
 VOID
 PacketHandshakeRxWorker(MULTICORE_WORKQUEUE *WorkQueue)
 {
-    WG_DEVICE *Wg = CONTAINING_RECORD(WorkQueue, WG_DEVICE, HandshakeRxThreads);
+    AWG_DEVICE *Wg = CONTAINING_RECORD(WorkQueue, AWG_DEVICE, HandshakeRxThreads);
     NET_BUFFER_LIST *Nbl;
 
     while ((Nbl = PtrRingConsume(&Wg->HandshakeRxQueue)) != NULL)
@@ -159,7 +160,7 @@ PacketHandshakeRxWorker(MULTICORE_WORKQUEUE *WorkQueue)
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 static VOID
-KeepKeyFresh(_Inout_ WG_PEER *Peer)
+KeepKeyFresh(_Inout_ AWG_PEER *Peer)
 {
     NOISE_KEYPAIR *Keypair;
     BOOLEAN Send;
@@ -263,10 +264,10 @@ out:
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 static BOOLEAN
-PacketConsumeDataDone(_Inout_ WG_PEER *Peer, _Inout_ NET_BUFFER_LIST *Nbl)
+PacketConsumeDataDone(_Inout_ AWG_PEER *Peer, _Inout_ NET_BUFFER_LIST *Nbl)
 {
     ULONG Len, LenBeforeTrim;
-    WG_PEER *RoutedPeer;
+    AWG_PEER *RoutedPeer;
     NET_BUFFER *Nb = NET_BUFFER_LIST_FIRST_NB(Nbl);
     UINT16_BE Proto;
     VOID *Hdr;
@@ -373,7 +374,7 @@ packetProcessed:
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 static BOOLEAN
-PacketPeerRxWork(_Inout_ WG_PEER *Peer, _In_ ULONG Budget)
+PacketPeerRxWork(_Inout_ AWG_PEER *Peer, _In_ ULONG Budget)
 {
     NOISE_KEYPAIR *Keypair;
     PACKET_STATE State;
@@ -433,14 +434,14 @@ ProcessPerPeerWork(PEER_SERIAL *WorkQueue)
         PeerSerialMaybeRetire(
             WorkQueue,
             Entry,
-            PacketPeerRxWork(CONTAINING_RECORD(Entry, WG_PEER, RxSerialEntry), PEER_XMIT_PACKETS_PER_ROUND));
+            PacketPeerRxWork(CONTAINING_RECORD(Entry, AWG_PEER, RxSerialEntry), PEER_XMIT_PACKETS_PER_ROUND));
 }
 
 _Use_decl_annotations_
 VOID
 PacketDecryptWorker(MULTICORE_WORKQUEUE *WorkQueue)
 {
-    WG_DEVICE *Wg = CONTAINING_RECORD(WorkQueue, WG_DEVICE, DecryptThreads);
+    AWG_DEVICE *Wg = CONTAINING_RECORD(WorkQueue, AWG_DEVICE, DecryptThreads);
     PTR_RING *Ring = &Wg->DecryptQueue;
     NET_BUFFER_LIST *First;
     SIMD_STATE Simd;
@@ -450,7 +451,7 @@ PacketDecryptWorker(MULTICORE_WORKQUEUE *WorkQueue)
     {
         for (NET_BUFFER_LIST *Nbl = First, *NextNbl; Nbl; Nbl = NextNbl)
         {
-            WG_PEER *Peer = NET_BUFFER_LIST_PEER(Nbl);
+            AWG_PEER *Peer = NET_BUFFER_LIST_PEER(Nbl);
             NextNbl = NET_BUFFER_LIST_NEXT_NBL(Nbl);
             NET_BUFFER_LIST_NEXT_NBL(Nbl) = NULL;
             PACKET_STATE State =
@@ -465,7 +466,7 @@ PacketDecryptWorker(MULTICORE_WORKQUEUE *WorkQueue)
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 static VOID
-PacketConsumeData(_Inout_ WG_DEVICE *Wg, _Inout_ __drv_aliasesMem NET_BUFFER_LIST *First)
+PacketConsumeData(_Inout_ AWG_DEVICE *Wg, _Inout_ __drv_aliasesMem NET_BUFFER_LIST *First)
 {
     NET_BUFFER_LIST *FirstForDevice = NULL, **Link = &FirstForDevice;
     for (NET_BUFFER_LIST *Nbl = First, *NextNbl; Nbl; Nbl = NextNbl)
@@ -474,7 +475,7 @@ PacketConsumeData(_Inout_ WG_DEVICE *Wg, _Inout_ __drv_aliasesMem NET_BUFFER_LIS
         NET_BUFFER_LIST_NEXT_NBL(Nbl) = NULL;
 
         MESSAGE_DATA *Message = MemGetValidatedNetBufferListData(Nbl);
-        WG_PEER *Peer = NULL;
+        AWG_PEER *Peer = NULL;
         NOISE_KEYPAIR *Keypair;
 
         KIRQL Irql = RcuReadLock();
@@ -504,7 +505,7 @@ PacketConsumeData(_Inout_ WG_DEVICE *Wg, _Inout_ __drv_aliasesMem NET_BUFFER_LIS
     {
         for (NET_BUFFER_LIST *Nbl = FirstForDevice, *NextNbl; Nbl; Nbl = NextNbl)
         {
-            WG_PEER *Peer = NET_BUFFER_LIST_PEER(Nbl);
+            AWG_PEER *Peer = NET_BUFFER_LIST_PEER(Nbl);
             NextNbl = NET_BUFFER_LIST_NEXT_NBL(Nbl);
             NET_BUFFER_LIST_NEXT_NBL(Nbl) = NULL;
             QueueEnqueuePerPeer(&Peer->Device->RxQueue, &Peer->RxSerialEntry, Nbl, PACKET_STATE_DEAD);
@@ -559,7 +560,7 @@ PrepareNetBufferListHeader(_Inout_ NET_BUFFER_LIST *Nbl)
 
 _Use_decl_annotations_
 VOID
-PacketReceive(WG_DEVICE *Wg, NET_BUFFER_LIST *First)
+PacketReceive(AWG_DEVICE *Wg, NET_BUFFER_LIST *First)
 {
     NET_BUFFER_LIST *FirstData = NULL, **Link = &FirstData;
     for (NET_BUFFER_LIST *Nbl = First, *NextNbl; Nbl; Nbl = NextNbl)
@@ -622,7 +623,7 @@ ReturnNetBufferLists(NDIS_HANDLE MiniportAdapterContext, PNET_BUFFER_LIST First,
 
 _Use_decl_annotations_
 VOID
-FreeIncomingHandshakes(WG_DEVICE *Wg)
+FreeIncomingHandshakes(AWG_DEVICE *Wg)
 {
     NET_BUFFER_LIST *Nbl;
     while ((Nbl = PtrRingConsume(&Wg->HandshakeRxQueue)) != NULL)

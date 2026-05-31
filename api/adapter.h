@@ -5,23 +5,23 @@
 
 #pragma once
 
-#include "wireguard.h"
+#include "amneziawg.h"
 #include <IPExport.h>
 #include <SetupAPI.h>
 #include <cfgmgr32.h>
 #include <Windows.h>
 
-#define WIREGUARD_HWID L"WireGuard"
-#define WIREGUARD_ENUMERATOR L"SWD\\" WIREGUARD_HWID
+#define AMNEZIAWG_HWID L"AmneziaWG"
+#define AMNEZIAWG_ENUMERATOR L"SWD\\" AMNEZIAWG_HWID
 
-extern const DEVPROPKEY DEVPKEY_WireGuard_Name;
+extern const DEVPROPKEY DEVPKEY_AmneziaWG_Name;
 
 typedef struct HSWDEVICE__ *HSWDEVICE;
 
 /**
- * WireGuard adapter descriptor.
+ * AmneziaWG adapter descriptor.
  */
-typedef struct _WIREGUARD_ADAPTER
+typedef struct _AMNEZIAWG_ADAPTER
 {
     HSWDEVICE SwDevice;
     HDEVINFO DevInfo;
@@ -34,31 +34,31 @@ typedef struct _WIREGUARD_ADAPTER
     DWORD IfIndex;
     HANDLE LogThread;
     DWORD LogState;
-} WIREGUARD_ADAPTER;
+} AMNEZIAWG_ADAPTER;
 /**
- * @copydoc WIREGUARD_CREATE_ADAPTER_FUNC
+ * @copydoc AMNEZIAWG_CREATE_ADAPTER_FUNC
  */
-WIREGUARD_CREATE_ADAPTER_FUNC WireGuardCreateAdapter;
+AMNEZIAWG_CREATE_ADAPTER_FUNC AmneziaWGCreateAdapter;
 
 /**
- * @copydoc WIREGUARD_OPEN_ADAPTER_FUNC
+ * @copydoc AMNEZIAWG_OPEN_ADAPTER_FUNC
  */
-WIREGUARD_OPEN_ADAPTER_FUNC WireGuardOpenAdapter;
+AMNEZIAWG_OPEN_ADAPTER_FUNC AmneziaWGOpenAdapter;
 
 /**
- * @copydoc WIREGUARD_CLOSE_ADAPTER_FUNC
+ * @copydoc AMNEZIAWG_CLOSE_ADAPTER_FUNC
  */
-WIREGUARD_CLOSE_ADAPTER_FUNC WireGuardCloseAdapter;
+AMNEZIAWG_CLOSE_ADAPTER_FUNC AmneziaWGCloseAdapter;
 
 /**
- * @copydoc WIREGUARD_GET_ADAPTER_LUID_FUNC
+ * @copydoc AMNEZIAWG_GET_ADAPTER_LUID_FUNC
  */
-WIREGUARD_GET_ADAPTER_LUID_FUNC WireGuardGetAdapterLUID;
+AMNEZIAWG_GET_ADAPTER_LUID_FUNC AmneziaWGGetAdapterLUID;
 
 /**
  * Returns a handle to the adapter device object.
  *
- * @param Adapter       Adapter handle obtained with WireGuardOpenAdapter or WireGuardCreateAdapter.
+ * @param Adapter       Adapter handle obtained with AmneziaWGOpenAdapter or AmneziaWGCreateAdapter.
  *
  * @return If the function succeeds, the return value is adapter device object handle.
  *         If the function fails, the return value is INVALID_HANDLE_VALUE. To get extended error
@@ -66,7 +66,7 @@ WIREGUARD_GET_ADAPTER_LUID_FUNC WireGuardGetAdapterLUID;
  */
 _Return_type_success_(return != INVALID_HANDLE_VALUE)
 HANDLE WINAPI
-AdapterOpenDeviceObject(_In_ const WIREGUARD_ADAPTER *Adapter);
+AdapterOpenDeviceObject(_In_ const AMNEZIAWG_ADAPTER *Adapter);
 
 /**
  * Returns the device object file name for an adapter instance ID.

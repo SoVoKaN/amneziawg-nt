@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #include "interlocked.h"
@@ -45,7 +46,7 @@ VOID NoiseDriverEntry(VOID)
 
 _Use_decl_annotations_
 VOID
-NoisePrecomputeStaticStatic(WG_PEER *Peer)
+NoisePrecomputeStaticStatic(AWG_PEER *Peer)
 {
     MuAcquirePushLockExclusive(&Peer->Handshake.Lock);
     if (!Peer->Handshake.StaticIdentity->HasIdentity || !Curve25519(
@@ -63,7 +64,7 @@ NoiseHandshakeInit(
     NOISE_STATIC_IDENTITY *StaticIdentity,
     CONST UINT8 PeerPublicKey[NOISE_PUBLIC_KEY_LEN],
     CONST UINT8 PeerPresharedKey[NOISE_SYMMETRIC_KEY_LEN],
-    WG_PEER *Peer)
+    AWG_PEER *Peer)
 {
     RtlZeroMemory(Handshake, sizeof(*Handshake));
     MuInitializePushLock(&Handshake->Lock);
@@ -102,7 +103,7 @@ _Must_inspect_result_
 _Post_maybenull_
 _Return_type_success_(return != NULL)
 static __drv_allocatesMem(Mem) NOISE_KEYPAIR *
-KeypairCreate(_In_ WG_PEER *Peer)
+KeypairCreate(_In_ AWG_PEER *Peer)
 {
     NOISE_KEYPAIR *Keypair = MemAllocateAndZero(sizeof(*Keypair));
 
@@ -188,7 +189,7 @@ NoiseKeypairsClear(NOISE_KEYPAIRS *Keypairs)
 
 _Use_decl_annotations_
 VOID
-NoiseExpireCurrentPeerKeypairs(WG_PEER *Peer)
+NoiseExpireCurrentPeerKeypairs(AWG_PEER *Peer)
 {
     NOISE_KEYPAIR *Keypair;
     KIRQL Irql;
@@ -609,10 +610,10 @@ out:
 }
 
 _Use_decl_annotations_
-WG_PEER *
-NoiseHandshakeConsumeInitiation(CONST MESSAGE_HANDSHAKE_INITIATION *Src, WG_DEVICE *Wg)
+AWG_PEER *
+NoiseHandshakeConsumeInitiation(CONST MESSAGE_HANDSHAKE_INITIATION *Src, AWG_DEVICE *Wg)
 {
-    WG_PEER *Peer = NULL, *RetPeer = NULL;
+    AWG_PEER *Peer = NULL, *RetPeer = NULL;
     NOISE_HANDSHAKE *Handshake;
     BOOLEAN ReplayAttack, FloodAttack;
     UINT8 Key[NOISE_SYMMETRIC_KEY_LEN];
@@ -736,11 +737,11 @@ out:
 }
 
 _Use_decl_annotations_
-WG_PEER *
-NoiseHandshakeConsumeResponse(CONST MESSAGE_HANDSHAKE_RESPONSE *Src, WG_DEVICE *Wg)
+AWG_PEER *
+NoiseHandshakeConsumeResponse(CONST MESSAGE_HANDSHAKE_RESPONSE *Src, AWG_DEVICE *Wg)
 {
     NOISE_HANDSHAKE_STATE State = HANDSHAKE_ZEROED;
-    WG_PEER *Peer = NULL, *RetPeer = NULL;
+    AWG_PEER *Peer = NULL, *RetPeer = NULL;
     NOISE_HANDSHAKE *Handshake;
     UINT8 Key[NOISE_SYMMETRIC_KEY_LEN];
     UINT8 Hash[NOISE_HASH_LEN];
@@ -842,7 +843,7 @@ NoiseHandshakeBeginSession(NOISE_HANDSHAKE *Handshake, NOISE_KEYPAIRS *Keypairs)
         DeriveKeys(&NewKeypair->Receiving, &NewKeypair->Sending, Handshake->ChainingKey);
 
     HandshakeZero(Handshake);
-    if (ExAcquireRundownProtection(&CONTAINING_RECORD(Handshake, WG_PEER, Handshake)->InUse))
+    if (ExAcquireRundownProtection(&CONTAINING_RECORD(Handshake, AWG_PEER, Handshake)->InUse))
     {
         AddNewKeypair(Keypairs, NewKeypair);
         LogInfoRatelimited(
@@ -852,7 +853,7 @@ NoiseHandshakeBeginSession(NOISE_HANDSHAKE *Handshake, NOISE_KEYPAIRS *Keypairs)
             Handshake->Entry.Peer->InternalId);
         Ret =
             IndexHashtableReplace(Handshake->Entry.Peer->Device->IndexHashtable, &Handshake->Entry, &NewKeypair->Entry);
-        ExReleaseRundownProtection(&CONTAINING_RECORD(Handshake, WG_PEER, Handshake)->InUse);
+        ExReleaseRundownProtection(&CONTAINING_RECORD(Handshake, AWG_PEER, Handshake)->InUse);
     }
     else
         MemFreeSensitive(NewKeypair, sizeof(NOISE_KEYPAIR));

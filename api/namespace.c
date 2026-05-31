@@ -37,7 +37,7 @@ BOOL NamespaceRuntimeInit(VOID)
         goto cleanupLeaveCriticalSection;
     }
 
-    BoundaryDescriptor = CreateBoundaryDescriptorW(L"WireGuard", 0);
+    BoundaryDescriptor = CreateBoundaryDescriptorW(L"AmneziaWG", 0);
     if (!BoundaryDescriptor)
     {
         LastError = LOG_LAST_ERROR(L"Failed to create boundary descriptor");
@@ -51,11 +51,11 @@ BOOL NamespaceRuntimeInit(VOID)
 
     for (;;)
     {
-        if ((PrivateNamespace = CreatePrivateNamespaceW(&SecurityAttributes, BoundaryDescriptor, L"WireGuard")) != NULL)
+        if ((PrivateNamespace = CreatePrivateNamespaceW(&SecurityAttributes, BoundaryDescriptor, L"AmneziaWG")) != NULL)
             break;
         if ((LastError = GetLastError()) == ERROR_ALREADY_EXISTS)
         {
-            if ((PrivateNamespace = OpenPrivateNamespaceW(BoundaryDescriptor, L"WireGuard")) != NULL)
+            if ((PrivateNamespace = OpenPrivateNamespaceW(BoundaryDescriptor, L"AmneziaWG")) != NULL)
                 break;
             if ((LastError = GetLastError()) == ERROR_PATH_NOT_FOUND)
                 continue;
@@ -83,7 +83,7 @@ NamespaceTakeDriverInstallationMutex(VOID)
 {
     if (!NamespaceRuntimeInit())
         return NULL;
-    HANDLE Mutex = CreateMutexW(&SecurityAttributes, FALSE, L"WireGuard\\WireGuard-Driver-Installation-Mutex");
+    HANDLE Mutex = CreateMutexW(&SecurityAttributes, FALSE, L"AmneziaWG\\AmneziaWG-Driver-Installation-Mutex");
     if (!Mutex)
     {
         LOG_LAST_ERROR(L"Failed to create mutex");
@@ -96,7 +96,7 @@ NamespaceTakeDriverInstallationMutex(VOID)
     case WAIT_ABANDONED:
         return Mutex;
     }
-    LOG(WIREGUARD_LOG_ERR, L"Failed to get mutex (status: 0x%x)", Result);
+    LOG(AMNEZIAWG_LOG_ERR, L"Failed to get mutex (status: 0x%x)", Result);
     CloseHandle(Mutex);
     SetLastError(ERROR_GEN_FAILURE);
     return NULL;
@@ -108,7 +108,7 @@ NamespaceTakeDeviceInstallationMutex(VOID)
 {
     if (!NamespaceRuntimeInit())
         return NULL;
-    HANDLE Mutex = CreateMutexW(&SecurityAttributes, FALSE, L"WireGuard\\WireGuard-Device-Installation-Mutex");
+    HANDLE Mutex = CreateMutexW(&SecurityAttributes, FALSE, L"AmneziaWG\\AmneziaWG-Device-Installation-Mutex");
     if (!Mutex)
     {
         LOG_LAST_ERROR(L"Failed to create mutex");
@@ -121,7 +121,7 @@ NamespaceTakeDeviceInstallationMutex(VOID)
     case WAIT_ABANDONED:
         return Mutex;
     }
-    LOG(WIREGUARD_LOG_ERR, L"Failed to get mutex (status: 0x%x)", Result);
+    LOG(AMNEZIAWG_LOG_ERR, L"Failed to get mutex (status: 0x%x)", Result);
     CloseHandle(Mutex);
     SetLastError(ERROR_GEN_FAILURE);
     return NULL;

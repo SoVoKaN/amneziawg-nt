@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #include "containers.h"
@@ -36,7 +37,7 @@ PUBKEY_HASHTABLE *PubkeyHashtableAlloc(VOID)
 
 _Use_decl_annotations_
 VOID
-PubkeyHashtableAdd(PUBKEY_HASHTABLE *Table, WG_PEER *Peer)
+PubkeyHashtableAdd(PUBKEY_HASHTABLE *Table, AWG_PEER *Peer)
 {
     MuAcquirePushLockExclusive(&Table->Lock);
     HlistAddHeadRcu(&Peer->PubkeyHash, PubkeyBucket(Table, Peer->Handshake.RemoteStatic));
@@ -45,7 +46,7 @@ PubkeyHashtableAdd(PUBKEY_HASHTABLE *Table, WG_PEER *Peer)
 
 _Use_decl_annotations_
 VOID
-PubkeyHashtableRemove(PUBKEY_HASHTABLE *Table, WG_PEER *Peer)
+PubkeyHashtableRemove(PUBKEY_HASHTABLE *Table, AWG_PEER *Peer)
 {
     MuAcquirePushLockExclusive(&Table->Lock);
     HlistDelInitRcu(&Peer->PubkeyHash);
@@ -53,10 +54,10 @@ PubkeyHashtableRemove(PUBKEY_HASHTABLE *Table, WG_PEER *Peer)
 }
 
 _Use_decl_annotations_
-WG_PEER *
+AWG_PEER *
 PubkeyHashtableLookup(PUBKEY_HASHTABLE *Table, CONST UINT8 Pubkey[NOISE_PUBLIC_KEY_LEN])
 {
-    WG_PEER *IterPeer, *Peer = NULL;
+    AWG_PEER *IterPeer, *Peer = NULL;
     KIRQL Irql;
 
     Irql = RcuReadLock();
@@ -207,7 +208,7 @@ IndexHashtableRemove(INDEX_HASHTABLE *Table, INDEX_HASHTABLE_ENTRY *Entry)
 /* Returns a strong reference to a entry->peer */
 _Use_decl_annotations_
 INDEX_HASHTABLE_ENTRY *
-IndexHashtableLookup(INDEX_HASHTABLE *Table, CONST INDEX_HASHTABLE_TYPE TypeMask, CONST UINT32_LE Index, WG_PEER **Peer)
+IndexHashtableLookup(INDEX_HASHTABLE *Table, CONST INDEX_HASHTABLE_TYPE TypeMask, CONST UINT32_LE Index, AWG_PEER **Peer)
 {
     INDEX_HASHTABLE_ENTRY *IterEntry, *Entry = NULL;
     KIRQL Irql;
