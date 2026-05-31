@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #pragma once
@@ -31,9 +32,7 @@ static inline VOID WriteMemoryBarrier(VOID)
 {
 #if defined(_ARM64_)
     __dmb(_ARM64_BARRIER_ISHST);
-#elif defined(_ARM_)
-    __dmb(_ARM_BARRIER_ISHST);
-#elif defined(_AMD64_) || defined(_X86_)
+#elif defined(_AMD64_)
     /* Strong ordering on Intel */
 #else
 #    error "Unknown arch. Consult smp_wmb."
@@ -41,11 +40,7 @@ static inline VOID WriteMemoryBarrier(VOID)
     _ReadWriteBarrier();
 }
 
-#ifdef _WIN64
-#    define InterlockedBitTestAndSetPtr(Addr, Nr) InterlockedBitTestAndSet64(Addr, Nr)
-#else
-#    define InterlockedBitTestAndSetPtr(Addr, Nr) InterlockedBitTestAndSet(Addr, Nr)
-#endif
+#define InterlockedBitTestAndSetPtr(Addr, Nr) InterlockedBitTestAndSet64(Addr, Nr)
 
 #ifndef InterlockedExchangePointerRelease
 _Ret_writes_(_Inexpressible_(Unknown)) static inline PVOID InterlockedExchangePointerRelease(
@@ -57,9 +52,7 @@ _Ret_writes_(_Inexpressible_(Unknown)) static inline PVOID InterlockedExchangePo
 {
 #    if defined(_ARM64_)
     __dmb(_ARM64_BARRIER_ISH);
-#    elif defined(_ARM_)
-    __dmb(_ARM_BARRIER_ISH);
-#    elif defined(_AMD64_) || defined(_X86_)
+#    elif defined(_AMD64_)
     /* Atomic instructions are already serializing on Intel */
 #    else
 #        error "Unknown arch. Consult __atomic_release_fence/smp_mb__before_atomic."

@@ -88,7 +88,7 @@ TryBuildMTURow(_In_ IRP *Irp, _Out_ MIB_IPINTERFACE_ROW *Row)
         UCHAR *UserBuffer = Stack->Parameters.DeviceIoControl.Type3InputBuffer;
         ULONG Len = Stack->Parameters.DeviceIoControl.InputBufferLength;
         BOOLEAN ShouldProbe = Irp->RequestorMode != KernelMode;
-#ifdef _WIN64
+
         if (IoIs32bitProcess(Irp))
         {
             NSI_SET_ALL_PARAMETERS_32 Params32;
@@ -106,7 +106,6 @@ TryBuildMTURow(_In_ IRP *Irp, _Out_ MIB_IPINTERFACE_ROW *Row)
             Params.RwParameterStructLength = Params32.RwParameterStructLength;
         }
         else
-#endif
         {
             if (Len < sizeof(Params))
                 return FALSE;

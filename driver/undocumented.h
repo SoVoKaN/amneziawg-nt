@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #pragma once
@@ -106,7 +107,6 @@ typedef struct _NSI_SET_ALL_PARAMETERS
     ULONG RwParameterStructLength;
 } NSI_SET_ALL_PARAMETERS;
 
-#ifdef _WIN64
 typedef struct _NSI_SET_ALL_PARAMETERS_32
 {
     ULONG ClientContext;
@@ -120,4 +120,3 @@ typedef struct _NSI_SET_ALL_PARAMETERS_32
     ULONG RwParameterStruct;
     ULONG RwParameterStructLength;
 } NSI_SET_ALL_PARAMETERS_32;
-#endif
