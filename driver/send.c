@@ -14,8 +14,44 @@
 #include "messages.h"
 #include "cookie.h"
 #include "logging.h"
+#include "undocumented.h"
 
-_IRQL_requires_max_(APC_LEVEL)
+_IRQL_requires_max_(PASSIVE_LEVEL)
+static VOID
+SendJunkPackets(_In_ AWG_PEER *Peer)
+{
+    JUNK_PACKETS Junk = { .Raw = ReadULong64NoFence(&Peer->Device->JunkPackets.Raw) };
+    _Analysis_assume_(Junk.Count <= MAX_JUNK_COUNT);
+
+    if (!Junk.Count)
+        return;
+
+    UCHAR *PacketBuffer = Junk.Size.Max ? MemAllocate(Junk.Size.Max) : NULL;
+    if (!PacketBuffer && Junk.Size.Max)
+        return;
+
+    USHORT PacketLengths[MAX_JUNK_COUNT];
+    if (!SystemPrng(PacketLengths, Junk.Count * sizeof(USHORT)))
+        goto cleanupBuffer;
+
+    ULONG PacketLengthRange = Junk.Size.Max - Junk.Size.Min + 1;
+    for (USHORT i = 0; i < Junk.Count; ++i)
+    {
+        USHORT PacketLength = Junk.Size.Min + (USHORT)(((ULONG)PacketLengths[i] * PacketLengthRange) >> 16);
+
+        _Analysis_assume_(PacketLength <= Junk.Size.Max);
+        if (PacketLength && !SystemPrng(PacketBuffer, PacketLength))
+            break;
+
+        SocketSendBufferToPeer(Peer, PacketBuffer, PacketLength);
+    }
+
+cleanupBuffer:
+    if (PacketBuffer)
+        MemFree(PacketBuffer);
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
 _Requires_lock_not_held_(Peer->Handshake.StaticIdentity->Lock)
 _Requires_lock_not_held_(Peer->Handshake.Lock)
 static VOID
@@ -33,6 +69,7 @@ PacketSendHandshakeInitiation(_Inout_ AWG_PEER *Peer)
 
     if (NoiseHandshakeCreateInitiation(&Packet, &Peer->Handshake))
     {
+        SendJunkPackets(Peer);
         CookieAddMacToPacket(&Packet, sizeof(Packet), Peer);
         TimersAnyAuthenticatedPacketTraversal(Peer);
         TimersAnyAuthenticatedPacketSent(Peer);
