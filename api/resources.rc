@@ -12,16 +12,6 @@ amneziawg.cat RCDATA "driver\\amneziawg.cat"
 amneziawg.inf RCDATA "driver\\amneziawg.inf"
 amneziawg.sys RCDATA "driver\\amneziawg.sys"
 
-#if defined(WANT_AMD64_WOW64)
-#    if defined(BUILT_AMD64_WOW64)
-amneziawg-amd64.cat RCDATA "amd64\\driver\\amneziawg.cat"
-amneziawg-amd64.inf RCDATA "amd64\\driver\\amneziawg.inf"
-amneziawg-amd64.sys RCDATA "amd64\\driver\\amneziawg.sys"
-setupapihost-amd64.dll RCDATA "amd64\\setupapihost.dll"
-#    else
-#        pragma message("AMD64 amneziawg.sys was not built, so this will not work from WOW64")
-#    endif
-#endif
 #if defined(WANT_ARM64_WOW64)
 #    if defined(BUILT_ARM64_WOW64)
 amneziawg-arm64.cat RCDATA "arm64\\driver\\amneziawg.cat"

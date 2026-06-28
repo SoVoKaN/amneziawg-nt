@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #pragma once
@@ -63,16 +64,9 @@ _Must_inspect_result_
 static FORCEINLINE BOOLEAN
 CryptoEqualMemory16(_In_reads_bytes_(16) CONST VOID *Data1, _In_reads_bytes_(16) CONST VOID *Data2)
 {
-#if _WIN64
     CONST volatile ULONG64 *D1 = Data1, *D2 = Data2;
     volatile ULONG64 NotEqual = (ReadULong64NoFence(&D1[0]) ^ ReadULong64NoFence(&D2[0])) |
                                 (ReadULong64NoFence(&D1[1]) ^ ReadULong64NoFence(&D2[1]));
-#else
-    CONST volatile ULONG *D1 = Data1, *D2 = Data2;
-    volatile ULONG NotEqual =
-        (ReadULongNoFence(&D1[0]) ^ ReadULongNoFence(&D2[0])) | (ReadULongNoFence(&D1[1]) ^ ReadULongNoFence(&D2[1])) |
-        (ReadULongNoFence(&D1[2]) ^ ReadULongNoFence(&D2[2])) | (ReadULongNoFence(&D1[3]) ^ ReadULongNoFence(&D2[3]));
-#endif
     return !NotEqual;
 }
 
@@ -80,20 +74,11 @@ _Must_inspect_result_
 static FORCEINLINE BOOLEAN
 CryptoEqualMemory32(_In_reads_bytes_(32) CONST VOID *Data1, _In_reads_bytes_(32) CONST VOID *Data2)
 {
-#if _WIN64
     CONST volatile ULONG64 *D1 = Data1, *D2 = Data2;
     volatile ULONG64 NotEqual = (ReadULong64NoFence(&D1[0]) ^ ReadULong64NoFence(&D2[0])) |
                                 (ReadULong64NoFence(&D1[1]) ^ ReadULong64NoFence(&D2[1])) |
                                 (ReadULong64NoFence(&D1[2]) ^ ReadULong64NoFence(&D2[2])) |
                                 (ReadULong64NoFence(&D1[3]) ^ ReadULong64NoFence(&D2[3]));
-#else
-    CONST volatile ULONG *D1 = Data1, *D2 = Data2;
-    volatile ULONG NotEqual =
-        (ReadULongNoFence(&D1[0]) ^ ReadULongNoFence(&D2[0])) | (ReadULongNoFence(&D1[1]) ^ ReadULongNoFence(&D2[1])) |
-        (ReadULongNoFence(&D1[2]) ^ ReadULongNoFence(&D2[2])) | (ReadULongNoFence(&D1[3]) ^ ReadULongNoFence(&D2[3])) |
-        (ReadULongNoFence(&D1[4]) ^ ReadULongNoFence(&D2[4])) | (ReadULongNoFence(&D1[5]) ^ ReadULongNoFence(&D2[5])) |
-        (ReadULongNoFence(&D1[6]) ^ ReadULongNoFence(&D2[6])) | (ReadULongNoFence(&D1[7]) ^ ReadULongNoFence(&D2[7]));
-#endif
     return !NotEqual;
 }
 
@@ -101,16 +86,9 @@ _Must_inspect_result_
 static FORCEINLINE BOOLEAN
 CryptoIsZero32(_In_reads_bytes_(32) CONST VOID *Data)
 {
-#if _WIN64
     CONST volatile ULONG64 *D = (CONST volatile ULONG64 *)Data;
     volatile ULONG64 NotZero =
         ReadULong64NoFence(&D[0]) | ReadULong64NoFence(&D[1]) | ReadULong64NoFence(&D[2]) | ReadULong64NoFence(&D[3]);
-#else
-    CONST volatile ULONG *D = (CONST volatile ULONG *)Data;
-    volatile ULONG NotZero = ReadULongNoFence(&D[0]) | ReadULongNoFence(&D[1]) | ReadULongNoFence(&D[2]) |
-                             ReadULongNoFence(&D[3]) | ReadULongNoFence(&D[4]) | ReadULongNoFence(&D[5]) |
-                             ReadULongNoFence(&D[6]) | ReadULongNoFence(&D[7]);
-#endif
     return !NotZero;
 }
 
