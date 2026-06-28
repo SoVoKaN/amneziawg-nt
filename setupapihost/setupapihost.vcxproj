@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Label="Globals">
     <ProjectGuid>{91F6BAF4-6CA1-4F33-A1BE-EFBA4E978B33}</ProjectGuid>
     <RootNamespace>setupapihost</RootNamespace>
@@ -9,7 +9,7 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <PlatformToolset>WindowsApplicationForDrivers10.0</PlatformToolset>
   </PropertyGroup>
-  <Import Project="..\wireguard-nt.props" />
+  <Import Project="..\amneziawg-nt.props" />
   <PropertyGroup>
     <TargetName>setupapihost</TargetName>
   </PropertyGroup>
@@ -29,7 +29,7 @@
   <ItemGroup>
     <ClCompile Include="host.c" />
   </ItemGroup>
-  <Import Project="..\wireguard-nt.props.user" Condition="exists('..\wireguard-nt.props.user')" />
+  <Import Project="..\amneziawg-nt.props.user" Condition="exists('..\amneziawg-nt.props.user')" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
   <Target Name="ProductionSign" Condition="'$(SignMode)'=='ProductionSign' And '$(SignStage)'=='SignDriver' And Exists('$(TargetPath)')">

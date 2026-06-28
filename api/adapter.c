@@ -30,15 +30,15 @@
 
 #pragma warning(disable : 4221) /* nonstandard: address of automatic in initializer */
 
-const DEVPROPKEY DEVPKEY_WireGuard_Name = {
-    { 0x65726957, 0x7547, 0x7261, { 0x64, 0x4e, 0x61, 0x6d, 0x65, 0x4b, 0x65, 0x79 } },
+const DEVPROPKEY DEVPKEY_AmneziaWG_Name = {
+    { 0x656E6D41, 0x697A, 0x5761, { 0x47, 0x4e, 0x61, 0x6d, 0x65, 0x4b, 0x65, 0x79 } },
     DEVPROPID_FIRST_USABLE + 1
 };
 
 _Must_inspect_result_
 static _Return_type_success_(return != FALSE)
 BOOL
-PopulateAdapterData(_Inout_ WIREGUARD_ADAPTER *Adapter)
+PopulateAdapterData(_Inout_ AMNEZIAWG_ADAPTER *Adapter)
 {
     DWORD LastError = ERROR_SUCCESS;
 
@@ -56,7 +56,7 @@ PopulateAdapterData(_Inout_ WIREGUARD_ADAPTER *Adapter)
     {
         WCHAR RegPath[MAX_REG_PATH];
         LoggerGetRegistryKeyPath(Key, RegPath);
-        LastError = LOG(WIREGUARD_LOG_ERR, L"Failed to get %.*s\\NetCfgInstanceId", MAX_REG_PATH, RegPath);
+        LastError = LOG(AMNEZIAWG_LOG_ERR, L"Failed to get %.*s\\NetCfgInstanceId", MAX_REG_PATH, RegPath);
         goto cleanupKey;
     }
     if (FAILED(CLSIDFromString(ValueStr, &Adapter->CfgInstanceID)))
@@ -64,7 +64,7 @@ PopulateAdapterData(_Inout_ WIREGUARD_ADAPTER *Adapter)
         WCHAR RegPath[MAX_REG_PATH];
         LoggerGetRegistryKeyPath(Key, RegPath);
         LastError =
-            LOG(WIREGUARD_LOG_ERR, L"%.*s\\NetCfgInstanceId is not a GUID: %s", MAX_REG_PATH, RegPath, ValueStr);
+            LOG(AMNEZIAWG_LOG_ERR, L"%.*s\\NetCfgInstanceId is not a GUID: %s", MAX_REG_PATH, RegPath, ValueStr);
         Free(ValueStr);
         goto cleanupKey;
     }
@@ -74,7 +74,7 @@ PopulateAdapterData(_Inout_ WIREGUARD_ADAPTER *Adapter)
     {
         WCHAR RegPath[MAX_REG_PATH];
         LoggerGetRegistryKeyPath(Key, RegPath);
-        LastError = LOG(WIREGUARD_LOG_ERR, L"Failed to get %.*s\\NetLuidIndex", MAX_REG_PATH, RegPath);
+        LastError = LOG(AMNEZIAWG_LOG_ERR, L"Failed to get %.*s\\NetLuidIndex", MAX_REG_PATH, RegPath);
         goto cleanupKey;
     }
 
@@ -82,7 +82,7 @@ PopulateAdapterData(_Inout_ WIREGUARD_ADAPTER *Adapter)
     {
         WCHAR RegPath[MAX_REG_PATH];
         LoggerGetRegistryKeyPath(Key, RegPath);
-        LastError = LOG(WIREGUARD_LOG_ERR, L"Failed to get %.*s\\*IfType", MAX_REG_PATH, RegPath);
+        LastError = LOG(AMNEZIAWG_LOG_ERR, L"Failed to get %.*s\\*IfType", MAX_REG_PATH, RegPath);
         goto cleanupKey;
     }
 
@@ -104,14 +104,14 @@ CleanupOrphanedDevices(VOID)
     SP_DEVINFO_DATA DevInfoData = { .cbSize = sizeof(DevInfoData) };
     WCHAR InstanceId[MAX_DEVICE_ID_LEN];
 
-    /* Step 1) ROOT\WIREGUARD devices that are actually recognized by PNP and probably loading the driver. */
+    /* Step 1) ROOT\AMNEZIAWG devices that are actually recognized by PNP and probably loading the driver. */
     HANDLE DriverInstallationMutex = NamespaceTakeDriverInstallationMutex();
     if (!DriverInstallationMutex)
     {
-        LOG(WIREGUARD_LOG_ERR, L"Failed to take driver installation mutex");
+        LOG(AMNEZIAWG_LOG_ERR, L"Failed to take driver installation mutex");
         goto cleanupSwd;
     }
-    HDEVINFO DevInfo = SetupDiGetClassDevsExW(&GUID_DEVCLASS_NET, L"ROOT\\" WIREGUARD_HWID, NULL, 0, NULL, NULL, NULL);
+    HDEVINFO DevInfo = SetupDiGetClassDevsExW(&GUID_DEVCLASS_NET, L"ROOT\\" AMNEZIAWG_HWID, NULL, 0, NULL, NULL, NULL);
     if (DevInfo == INVALID_HANDLE_VALUE)
     {
         LOG_LAST_ERROR(L"Failed to get adapters");
@@ -129,18 +129,19 @@ CleanupOrphanedDevices(VOID)
         if (!SetupDiGetDeviceInstanceIdW(DevInfo, &DevInfoData, InstanceId, RequiredChars, &RequiredChars))
             wcsncpy_s(InstanceId, _countof(InstanceId), L"<unknown>", _TRUNCATE);
         if (AdapterRemoveInstance(DevInfo, &DevInfoData))
-            LOG(WIREGUARD_LOG_INFO, L"Removed stray adapter %s", InstanceId);
+            LOG(AMNEZIAWG_LOG_INFO, L"Removed stray adapter %s", InstanceId);
         else
             LOG_LAST_ERROR(L"Failed to remove stray adapter %s", InstanceId);
     }
     SetupDiDestroyDeviceInfoList(DevInfo);
 
-    /* Step 2) ROOT\WIREGUARD devices that are not recognized by PNP, which were likely temporary nodes left around by driver installation. */
+    /* Step 2) ROOT\AMNEZIAWG devices that are not recognized by PNP, which were likely temporary nodes left around by
+     * driver installation. */
 cleanupReg:
     HKEY EnumKey;
     if (RegOpenKeyExW(
             HKEY_LOCAL_MACHINE,
-            L"SYSTEM\\CurrentControlSet\\Enum\\ROOT\\" WIREGUARD_HWID,
+            L"SYSTEM\\CurrentControlSet\\Enum\\ROOT\\" AMNEZIAWG_HWID,
             0,
             KEY_ENUMERATE_SUB_KEYS,
             &EnumKey) != ERROR_SUCCESS)
@@ -151,14 +152,14 @@ cleanupReg:
         WCHAR SubKey[MAX_DEVICE_ID_LEN];
         DWORD SubKeyLen = _countof(SubKey);
         if (RegEnumKeyExW(EnumKey, Index, SubKey, &SubKeyLen, NULL, NULL, NULL, NULL) != ERROR_SUCCESS ||
-            _snwprintf_s(InstanceId, _countof(InstanceId), _TRUNCATE, L"ROOT\\" WIREGUARD_HWID L"\\%s", SubKey) < 0)
+            _snwprintf_s(InstanceId, _countof(InstanceId), _TRUNCATE, L"ROOT\\" AMNEZIAWG_HWID L"\\%s", SubKey) < 0)
             break;
 
         DEVINST DevInst;
         if ((CM_Locate_DevNodeW(&DevInst, InstanceId, CM_LOCATE_DEVNODE_PHANTOM) == CR_SUCCESS &&
              CM_Uninstall_DevNode(DevInst, 0) == CR_SUCCESS) ||
             RegDeleteTreeW(EnumKey, SubKey) == ERROR_SUCCESS)
-            LOG(WIREGUARD_LOG_INFO, L"Removed phantom adapter %s", InstanceId);
+            LOG(AMNEZIAWG_LOG_INFO, L"Removed phantom adapter %s", InstanceId);
         else
         {
             ++Index;
@@ -169,15 +170,15 @@ cleanupReg:
 cleanupDriverInstallationMutex:
     NamespaceReleaseMutex(DriverInstallationMutex);
 
-    /* Step 3) SWD\WIREGUARD devices that were left around when the process was forcibly killed. */
+    /* Step 3) SWD\AMNEZIAWG devices that were left around when the process was forcibly killed. */
 cleanupSwd:
     HANDLE DeviceInstallationMutex = NamespaceTakeDeviceInstallationMutex();
     if (!DeviceInstallationMutex)
     {
-        LOG(WIREGUARD_LOG_ERR, L"Failed to take device installation mutex");
+        LOG(AMNEZIAWG_LOG_ERR, L"Failed to take device installation mutex");
         return;
     }
-    DevInfo = SetupDiGetClassDevsExW(&GUID_DEVCLASS_NET, WIREGUARD_ENUMERATOR, NULL, 0, NULL, NULL, NULL);
+    DevInfo = SetupDiGetClassDevsExW(&GUID_DEVCLASS_NET, AMNEZIAWG_ENUMERATOR, NULL, 0, NULL, NULL, NULL);
     if (DevInfo == INVALID_HANDLE_VALUE)
     {
         LOG_LAST_ERROR(L"Failed to get adapters");
@@ -198,7 +199,7 @@ cleanupSwd:
         if (!SetupDiGetDeviceInstanceIdW(DevInfo, &DevInfoData, InstanceId, RequiredChars, &RequiredChars))
             wcsncpy_s(InstanceId, _countof(InstanceId), L"<unknown>", _TRUNCATE);
         if (AdapterRemoveInstance(DevInfo, &DevInfoData))
-            LOG(WIREGUARD_LOG_INFO, L"Removed orphaned adapter %s", InstanceId);
+            LOG(AMNEZIAWG_LOG_INFO, L"Removed orphaned adapter %s", InstanceId);
         else
             LOG_LAST_ERROR(L"Failed to remove orphaned adapter %s", InstanceId);
     }
@@ -234,11 +235,11 @@ AdapterCleanupOrphanedDevices(BOOL Background)
 
 _Use_decl_annotations_
 VOID WINAPI
-WireGuardCloseAdapter(WIREGUARD_ADAPTER *Adapter)
+AmneziaWGCloseAdapter(AMNEZIAWG_ADAPTER *Adapter)
 {
     if (!Adapter)
         return;
-    WireGuardSetAdapterLogging(Adapter, WIREGUARD_ADAPTER_LOG_OFF);
+    AmneziaWGSetAdapterLogging(Adapter, AMNEZIAWG_ADAPTER_LOG_OFF);
     Free(Adapter->InterfaceFilename);
     if (Adapter->SwDevice)
         SwDeviceClose(Adapter->SwDevice);
@@ -257,7 +258,7 @@ BOOL
 RenameByNetGUID(_In_ GUID *Guid, _In_reads_or_z_(MAX_ADAPTER_NAME) LPCWSTR Name)
 {
     DWORD LastError = ERROR_NOT_FOUND;
-    HDEVINFO DevInfo = SetupDiGetClassDevsExW(&GUID_DEVCLASS_NET, WIREGUARD_ENUMERATOR, NULL, 0, NULL, NULL, NULL);
+    HDEVINFO DevInfo = SetupDiGetClassDevsExW(&GUID_DEVCLASS_NET, AMNEZIAWG_ENUMERATOR, NULL, 0, NULL, NULL, NULL);
     if (DevInfo == INVALID_HANDLE_VALUE)
     {
         LastError = GetLastError();
@@ -289,7 +290,7 @@ RenameByNetGUID(_In_ GUID *Guid, _In_reads_or_z_(MAX_ADAPTER_NAME) LPCWSTR Name)
         LastError = SetupDiSetDevicePropertyW(
                         DevInfo,
                         &DevInfoData,
-                        &DEVPKEY_WireGuard_Name,
+                        &DEVPKEY_AmneziaWG_Name,
                         DEVPROP_TYPE_STRING,
                         (PBYTE)Name,
                         (DWORD)((wcslen(Name) + 1) * sizeof(Name[0])),
@@ -386,7 +387,7 @@ NciSetAdapterName(_In_ GUID *Guid, _In_reads_or_z_(MAX_ADAPTER_NAME) LPCWSTR Nam
 
 _Use_decl_annotations_
 VOID WINAPI
-WireGuardGetAdapterLUID(WIREGUARD_ADAPTER *Adapter, NET_LUID *Luid)
+AmneziaWGGetAdapterLUID(AMNEZIAWG_ADAPTER *Adapter, NET_LUID *Luid)
 {
     Luid->Info.Reserved = 0;
     Luid->Info.NetLuidIndex = Adapter->LuidIndex;
@@ -395,7 +396,7 @@ WireGuardGetAdapterLUID(WIREGUARD_ADAPTER *Adapter, NET_LUID *Luid)
 
 _Use_decl_annotations_
 HANDLE WINAPI
-AdapterOpenDeviceObject(const WIREGUARD_ADAPTER *Adapter)
+AdapterOpenDeviceObject(const AMNEZIAWG_ADAPTER *Adapter)
 {
     HANDLE Handle = CreateFileW(
         Adapter->InterfaceFilename,
@@ -574,11 +575,11 @@ DeviceCreateCallback(
 }
 
 _Use_decl_annotations_
-WIREGUARD_ADAPTER_HANDLE WINAPI
-WireGuardCreateAdapter(LPCWSTR Name, LPCWSTR TunnelType, const GUID *RequestedGUID)
+AMNEZIAWG_ADAPTER_HANDLE WINAPI
+AmneziaWGCreateAdapter(LPCWSTR Name, LPCWSTR TunnelType, const GUID *RequestedGUID)
 {
     DWORD LastError = ERROR_SUCCESS;
-    WIREGUARD_ADAPTER *Adapter = NULL;
+    AMNEZIAWG_ADAPTER *Adapter = NULL;
 
     HANDLE DeviceInstallationMutex = NamespaceTakeDeviceInstallationMutex();
     if (!DeviceInstallationMutex)
@@ -595,7 +596,7 @@ WireGuardCreateAdapter(LPCWSTR Name, LPCWSTR TunnelType, const GUID *RequestedGU
         goto cleanupDeviceInstallationMutex;
     }
 
-    LOG(WIREGUARD_LOG_INFO, L"Creating adapter");
+    LOG(AMNEZIAWG_LOG_INFO, L"Creating adapter");
 
     Adapter = Zalloc(sizeof(*Adapter));
     if (!Adapter)
@@ -652,7 +653,7 @@ WireGuardCreateAdapter(LPCWSTR Name, LPCWSTR TunnelType, const GUID *RequestedGU
                                              .Buffer = (PVOID)&GUID_DEVCLASS_NET,
                                              .BufferSize = sizeof(GUID_DEVCLASS_NET) } };
     HRet = SwDeviceCreate(
-        WIREGUARD_HWID,
+        AMNEZIAWG_HWID,
         RootNodeName,
         &StubCreateInfo,
         _countof(StubDeviceProperties),
@@ -702,7 +703,7 @@ WireGuardCreateAdapter(LPCWSTR Name, LPCWSTR TunnelType, const GUID *RequestedGU
     SwDeviceClose(Adapter->SwDevice);
     Adapter->SwDevice = NULL;
 
-    static const WCHAR Hwids[_countof(WIREGUARD_HWID) + 1 /*Multi-string terminator*/] = WIREGUARD_HWID;
+    static const WCHAR Hwids[_countof(AMNEZIAWG_HWID) + 1 /*Multi-string terminator*/] = AMNEZIAWG_HWID;
     SW_DEVICE_CREATE_INFO CreateInfo = { .cbSize = sizeof(CreateInfo),
                                          .pszInstanceId = InstanceIdStr,
                                          .pszzHardwareIds = Hwids,
@@ -710,7 +711,7 @@ WireGuardCreateAdapter(LPCWSTR Name, LPCWSTR TunnelType, const GUID *RequestedGU
                                              SWDeviceCapabilitiesSilentInstall | SWDeviceCapabilitiesDriverRequired,
                                          .pszDeviceDescription = TunnelTypeName };
     DEVPROPERTY DeviceProperties[] = {
-        { .CompKey = { .Key = DEVPKEY_WireGuard_Name, .Store = DEVPROP_STORE_SYSTEM },
+        { .CompKey = { .Key = DEVPKEY_AmneziaWG_Name, .Store = DEVPROP_STORE_SYSTEM },
           .Type = DEVPROP_TYPE_STRING,
           .Buffer = (WCHAR *)Name,
           .BufferSize = (ULONG)((wcslen(Name) + 1) * sizeof(*Name)) },
@@ -725,7 +726,7 @@ WireGuardCreateAdapter(LPCWSTR Name, LPCWSTR TunnelType, const GUID *RequestedGU
     };
 
     HRet = SwDeviceCreate(
-        WIREGUARD_HWID,
+        AMNEZIAWG_HWID,
         RootNodeName,
         &CreateInfo,
         _countof(DeviceProperties),
@@ -817,13 +818,13 @@ WireGuardCreateAdapter(LPCWSTR Name, LPCWSTR TunnelType, const GUID *RequestedGU
 
     if (!PopulateAdapterData(Adapter))
     {
-        LastError = LOG(WIREGUARD_LOG_ERR, L"Failed to populate adapter data");
+        LastError = LOG(AMNEZIAWG_LOG_ERR, L"Failed to populate adapter data");
         goto cleanupCreateContext;
     }
 
     if (!NciSetAdapterName(&Adapter->CfgInstanceID, Name))
     {
-        LastError = LOG(WIREGUARD_LOG_ERR, L"Failed to set adapter name \"%s\"", Name);
+        LastError = LOG(AMNEZIAWG_LOG_ERR, L"Failed to set adapter name \"%s\"", Name);
         goto cleanupCreateContext;
     }
 
@@ -832,7 +833,7 @@ cleanupCreateContext:
 cleanupAdapter:
     if (LastError != ERROR_SUCCESS)
     {
-        WireGuardCloseAdapter(Adapter);
+        AmneziaWGCloseAdapter(Adapter);
         Adapter = NULL;
     }
 cleanupDriverInstall:
@@ -845,11 +846,11 @@ cleanup:
 }
 
 _Use_decl_annotations_
-WIREGUARD_ADAPTER_HANDLE WINAPI
-WireGuardOpenAdapter(LPCWSTR Name)
+AMNEZIAWG_ADAPTER_HANDLE WINAPI
+AmneziaWGOpenAdapter(LPCWSTR Name)
 {
     DWORD LastError = ERROR_SUCCESS;
-    WIREGUARD_ADAPTER *Adapter = NULL;
+    AMNEZIAWG_ADAPTER *Adapter = NULL;
 
     HANDLE DeviceInstallationMutex = NamespaceTakeDeviceInstallationMutex();
     if (!DeviceInstallationMutex)
@@ -866,7 +867,7 @@ WireGuardOpenAdapter(LPCWSTR Name)
     }
 
     HDEVINFO DevInfo =
-        SetupDiGetClassDevsExW(&GUID_DEVCLASS_NET, WIREGUARD_ENUMERATOR, NULL, DIGCF_PRESENT, NULL, NULL, NULL);
+        SetupDiGetClassDevsExW(&GUID_DEVCLASS_NET, AMNEZIAWG_ENUMERATOR, NULL, DIGCF_PRESENT, NULL, NULL, NULL);
     if (DevInfo == INVALID_HANDLE_VALUE)
     {
         LastError = LOG_LAST_ERROR(L"Failed to get present adapters");
@@ -889,7 +890,7 @@ WireGuardOpenAdapter(LPCWSTR Name)
         Found = SetupDiGetDevicePropertyW(
                     DevInfo,
                     &DevInfoData,
-                    &DEVPKEY_WireGuard_Name,
+                    &DEVPKEY_AmneziaWG_Name,
                     &PropType,
                     (PBYTE)OtherName,
                     MAX_ADAPTER_NAME * sizeof(OtherName[0]),
@@ -923,7 +924,7 @@ cleanupDevInfo:
 cleanupAdapter:
     if (LastError != ERROR_SUCCESS)
     {
-        WireGuardCloseAdapter(Adapter);
+        AmneziaWGCloseAdapter(Adapter);
         Adapter = NULL;
     }
 cleanupDeviceInstallationMutex:

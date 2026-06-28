@@ -22,7 +22,7 @@
 #include "registry.h"
 #include "ntdll.h"
 #include "rundll32.h"
-#include "wireguard-inf.h"
+#include "amneziawg-inf.h"
 
 #pragma warning(disable : 4221) /* nonstandard: address of automatic in initializer */
 
@@ -31,7 +31,7 @@ struct _SP_DEVINFO_DATA_LIST
     SP_DEVINFO_DATA Data;
     VOID *Configuration;
     DWORD ConfigurationBytes;
-    WIREGUARD_ADAPTER_STATE AdapterState;
+    AMNEZIAWG_ADAPTER_STATE AdapterState;
     struct _SP_DEVINFO_DATA_LIST *Next;
 };
 
@@ -40,7 +40,7 @@ static _Return_type_success_(return != INVALID_HANDLE_VALUE)
 HANDLE
 OpenDeviceObject(_In_z_ LPCWSTR InstanceId)
 {
-    WIREGUARD_ADAPTER Adapter = { .InterfaceFilename = AdapterGetDeviceObjectFileName(InstanceId) };
+    AMNEZIAWG_ADAPTER Adapter = { .InterfaceFilename = AdapterGetDeviceObjectFileName(InstanceId) };
     if (!Adapter.InterfaceFilename)
         return INVALID_HANDLE_VALUE;
     HANDLE Handle = AdapterOpenDeviceObject(&Adapter);
@@ -55,14 +55,14 @@ SnapshotConfigurationAndState(
     _In_ SP_DEVINFO_DATA *DevInfoData,
     _Out_ VOID **Configuration,
     _Out_ DWORD *ConfigurationBytes,
-    _Out_ WIREGUARD_ADAPTER_STATE *State)
+    _Out_ AMNEZIAWG_ADAPTER_STATE *State)
 {
     DEVPROPTYPE PropType;
     WCHAR Name[MAX_ADAPTER_NAME] = L"<unknown>";
     SetupDiGetDevicePropertyW(
         DevInfo,
         DevInfoData,
-        &DEVPKEY_WireGuard_Name,
+        &DEVPKEY_AmneziaWG_Name,
         &PropType,
         (PBYTE)Name,
         MAX_ADAPTER_NAME * sizeof(Name[0]),
@@ -80,12 +80,12 @@ SnapshotConfigurationAndState(
     HANDLE NdisHandle = OpenDeviceObject(InstanceId);
     if (NdisHandle == INVALID_HANDLE_VALUE)
     {
-        LastError = LOG(WIREGUARD_LOG_ERR, L"Failed to get adapter \"%s\" object", Name);
+        LastError = LOG(AMNEZIAWG_LOG_ERR, L"Failed to get adapter \"%s\" object", Name);
         goto cleanup;
     }
-    WG_IOCTL_ADAPTER_STATE Op = WG_IOCTL_ADAPTER_STATE_QUERY;
+    AWG_IOCTL_ADAPTER_STATE Op = AWG_IOCTL_ADAPTER_STATE_QUERY;
     if (!DeviceIoControl(
-            NdisHandle, WG_IOCTL_SET_ADAPTER_STATE, &Op, sizeof(Op), State, sizeof(*State), &RequiredBytes, NULL))
+            NdisHandle, AWG_IOCTL_SET_ADAPTER_STATE, &Op, sizeof(Op), State, sizeof(*State), &RequiredBytes, NULL))
     {
         LastError = LOG_LAST_ERROR(L"Failed to query adapter state on adapter \"%s\"", Name);
         goto cleanupHandle;
@@ -99,7 +99,8 @@ SnapshotConfigurationAndState(
                 LOG_LAST_ERROR(L"Failed to allocate %u bytes for configuration on adapter \"%s\"", RequiredBytes, Name);
             goto cleanupHandle;
         }
-        if (DeviceIoControl(NdisHandle, WG_IOCTL_GET, NULL, 0, *Configuration, RequiredBytes, ConfigurationBytes, NULL))
+        if (DeviceIoControl(
+                NdisHandle, AWG_IOCTL_GET, NULL, 0, *Configuration, RequiredBytes, ConfigurationBytes, NULL))
             break;
         Free(*Configuration);
         *Configuration = NULL;
@@ -122,14 +123,14 @@ RestoreConfigurationAndState(
     _In_ SP_DEVINFO_DATA *DevInfoData,
     _In_ VOID *Configuration,
     _In_ DWORD ConfigurationBytes,
-    _In_ WIREGUARD_ADAPTER_STATE State)
+    _In_ AMNEZIAWG_ADAPTER_STATE State)
 {
     DEVPROPTYPE PropType;
     WCHAR Name[MAX_ADAPTER_NAME] = L"<unknown>";
     SetupDiGetDevicePropertyW(
         DevInfo,
         DevInfoData,
-        &DEVPKEY_WireGuard_Name,
+        &DEVPKEY_AmneziaWG_Name,
         &PropType,
         (PBYTE)Name,
         MAX_ADAPTER_NAME * sizeof(Name[0]),
@@ -147,15 +148,15 @@ RestoreConfigurationAndState(
     HANDLE NdisHandle = OpenDeviceObject(InstanceId);
     if (NdisHandle == INVALID_HANDLE_VALUE)
     {
-        LastError = LOG(WIREGUARD_LOG_ERR, L"Failed to get adapter \"%s\" object", Name);
+        LastError = LOG(AMNEZIAWG_LOG_ERR, L"Failed to get adapter \"%s\" object", Name);
         goto cleanup;
     }
-    if (!DeviceIoControl(NdisHandle, WG_IOCTL_SET, NULL, 0, Configuration, ConfigurationBytes, &RequiredBytes, NULL))
+    if (!DeviceIoControl(NdisHandle, AWG_IOCTL_SET, NULL, 0, Configuration, ConfigurationBytes, &RequiredBytes, NULL))
     {
         LastError = LOG_LAST_ERROR(L"Failed to set configuration on adapter \"%s\"", Name);
         goto cleanupHandle;
     }
-    if (!DeviceIoControl(NdisHandle, WG_IOCTL_SET_ADAPTER_STATE, &State, sizeof(State), NULL, 0, &RequiredBytes, NULL))
+    if (!DeviceIoControl(NdisHandle, AWG_IOCTL_SET_ADAPTER_STATE, &State, sizeof(State), NULL, 0, &RequiredBytes, NULL))
     {
         LastError = LOG_LAST_ERROR(L"Failed to set adapter state on adapter \"%s\"", Name);
         goto cleanupHandle;
@@ -192,7 +193,7 @@ DisableAllOurAdapters(_In_ HDEVINFO DevInfo, _Inout_ SP_DEVINFO_DATA_LIST **Disa
         SetupDiGetDevicePropertyW(
             DevInfo,
             &DeviceNode->Data,
-            &DEVPKEY_WireGuard_Name,
+            &DEVPKEY_AmneziaWG_Name,
             &PropType,
             (PBYTE)Name,
             MAX_ADAPTER_NAME * sizeof(Name[0]),
@@ -204,16 +205,16 @@ DisableAllOurAdapters(_In_ HDEVINFO DevInfo, _Inout_ SP_DEVINFO_DATA_LIST **Disa
             ((Status & DN_HAS_PROBLEM) && ProblemCode == CM_PROB_DISABLED))
             goto cleanupDeviceNode;
 
-        LOG(WIREGUARD_LOG_INFO, L"Snapshotting configuration of adapter \"%s\"", Name);
+        LOG(AMNEZIAWG_LOG_INFO, L"Snapshotting configuration of adapter \"%s\"", Name);
         if (!SnapshotConfigurationAndState(
                 DevInfo,
                 &DeviceNode->Data,
                 &DeviceNode->Configuration,
                 &DeviceNode->ConfigurationBytes,
                 &DeviceNode->AdapterState))
-            LOG(WIREGUARD_LOG_WARN, L"Failed to snapshot configuration of adapter \"%s\"", Name);
+            LOG(AMNEZIAWG_LOG_WARN, L"Failed to snapshot configuration of adapter \"%s\"", Name);
 
-        LOG(WIREGUARD_LOG_INFO, L"Disabling adapter \"%s\"", Name);
+        LOG(AMNEZIAWG_LOG_INFO, L"Disabling adapter \"%s\"", Name);
         if (!AdapterDisableInstance(DevInfo, &DeviceNode->Data))
         {
             LOG_LAST_ERROR(L"Failed to disable adapter \"%s\"", Name);
@@ -243,14 +244,14 @@ EnableAllOurAdapters(_In_ HDEVINFO DevInfo, _In_ SP_DEVINFO_DATA_LIST *AdaptersT
         SetupDiGetDevicePropertyW(
             DevInfo,
             &DeviceNode->Data,
-            &DEVPKEY_WireGuard_Name,
+            &DEVPKEY_AmneziaWG_Name,
             &PropType,
             (PBYTE)Name,
             MAX_ADAPTER_NAME * sizeof(Name[0]),
             NULL,
             0);
 
-        LOG(WIREGUARD_LOG_INFO, L"Enabling adapter \"%s\"", Name);
+        LOG(AMNEZIAWG_LOG_INFO, L"Enabling adapter \"%s\"", Name);
         if (!AdapterEnableInstance(DevInfo, &DeviceNode->Data))
         {
             LOG_LAST_ERROR(L"Failed to enable adapter \"%s\"", Name);
@@ -258,14 +259,14 @@ EnableAllOurAdapters(_In_ HDEVINFO DevInfo, _In_ SP_DEVINFO_DATA_LIST *AdaptersT
         }
         if (DeviceNode->Configuration)
         {
-            LOG(WIREGUARD_LOG_INFO, L"Restoring configuration of adapter \"%s\"", Name);
+            LOG(AMNEZIAWG_LOG_INFO, L"Restoring configuration of adapter \"%s\"", Name);
             if (!RestoreConfigurationAndState(
                     DevInfo,
                     &DeviceNode->Data,
                     DeviceNode->Configuration,
                     DeviceNode->ConfigurationBytes,
                     DeviceNode->AdapterState))
-                LOG(WIREGUARD_LOG_WARN, L"Failed to restore configuration of adapter \"%s\"", Name);
+                LOG(AMNEZIAWG_LOG_WARN, L"Failed to restore configuration of adapter \"%s\"", Name);
         }
     }
     return RET_ERROR(TRUE, LastError);
@@ -326,7 +327,7 @@ VersionOfFile(_In_z_ LPCWSTR Filename)
     Version = FixedInfo->dwFileVersionMS;
     if (!Version)
     {
-        LOG(WIREGUARD_LOG_WARN, L"Determined version of %s, but was v0.0, so returning failure", Filename);
+        LOG(AMNEZIAWG_LOG_WARN, L"Determined version of %s, but was v0.0, so returning failure", Filename);
         LastError = ERROR_VERSION_PARSE_ERROR;
     }
 out:
@@ -350,7 +351,7 @@ MaybeGetRunningDriverVersion(BOOL ReturnOneIfRunningInsteadOfVersion)
         Free(Modules);
         if (Status == STATUS_INFO_LENGTH_MISMATCH)
             continue;
-        LOG(WIREGUARD_LOG_ERR, L"Failed to enumerate drivers (status: 0x%x)", Status);
+        LOG(AMNEZIAWG_LOG_ERR, L"Failed to enumerate drivers (status: 0x%x)", Status);
         SetLastError(RtlNtStatusToDosError(Status));
         return 0;
     }
@@ -358,7 +359,7 @@ MaybeGetRunningDriverVersion(BOOL ReturnOneIfRunningInsteadOfVersion)
     for (ULONG i = Modules->NumberOfModules; i-- > 0;)
     {
         LPCSTR NtPath = (LPCSTR)Modules->Modules[i].FullPathName;
-        if (!_stricmp(&NtPath[Modules->Modules[i].OffsetToFileName], "wireguard.sys"))
+        if (!_stricmp(&NtPath[Modules->Modules[i].OffsetToFileName], "amneziawg.sys"))
         {
             if (ReturnOneIfRunningInsteadOfVersion)
             {
@@ -381,12 +382,14 @@ cleanupModules:
 }
 
 _Use_decl_annotations_
-DWORD WINAPI WireGuardGetRunningDriverVersion(VOID)
+DWORD WINAPI
+AmneziaWGGetRunningDriverVersion(VOID)
 {
     return MaybeGetRunningDriverVersion(FALSE);
 }
 
-static BOOL EnsureWireGuardUnloaded(VOID)
+static BOOL
+EnsureAmneziaWGUnloaded(VOID)
 {
     BOOL Loaded;
     for (DWORD Tries = 0; Tries < 1500; ++Tries)
@@ -423,13 +426,15 @@ _Use_decl_annotations_
 BOOL
 DriverInstall(HDEVINFO *DevInfoExistingAdaptersForCleanup, SP_DEVINFO_DATA_LIST **ExistingAdaptersForCleanup)
 {
-    static const FILETIME OurDriverDate = WIREGUARD_INF_FILETIME;
-    static const DWORDLONG OurDriverVersion = WIREGUARD_INF_VERSION;
+    static const FILETIME OurDriverDate = AMNEZIAWG_INF_FILETIME;
+    static const DWORDLONG OurDriverVersion = AMNEZIAWG_INF_VERSION;
+
+    AdapterCleanupOrphanedDevices(FALSE);
 
     HANDLE DriverInstallationLock = NamespaceTakeDriverInstallationMutex();
     if (!DriverInstallationLock)
     {
-        LOG(WIREGUARD_LOG_ERR, L"Failed to take driver installation mutex");
+        LOG(AMNEZIAWG_LOG_ERR, L"Failed to take driver installation mutex");
         return FALSE;
     }
     DWORD LastError = ERROR_SUCCESS;
@@ -441,12 +446,12 @@ DriverInstall(HDEVINFO *DevInfoExistingAdaptersForCleanup, SP_DEVINFO_DATA_LIST 
     }
     SP_DEVINFO_DATA DevInfoData = { .cbSize = sizeof(DevInfoData) };
     if (!SetupDiCreateDeviceInfoW(
-            DevInfo, WIREGUARD_HWID, &GUID_DEVCLASS_NET, NULL, NULL, DICD_GENERATE_ID, &DevInfoData))
+            DevInfo, AMNEZIAWG_HWID, &GUID_DEVCLASS_NET, NULL, NULL, DICD_GENERATE_ID, &DevInfoData))
     {
         LastError = LOG_LAST_ERROR(L"Failed to create new device information element");
         goto cleanupDevInfo;
     }
-    static const WCHAR Hwids[_countof(WIREGUARD_HWID) + 1 /*Multi-string terminator*/] = WIREGUARD_HWID;
+    static const WCHAR Hwids[_countof(AMNEZIAWG_HWID) + 1 /*Multi-string terminator*/] = AMNEZIAWG_HWID;
     if (!SetupDiSetDeviceRegistryPropertyW(DevInfo, &DevInfoData, SPDRP_HARDWAREID, (const BYTE *)Hwids, sizeof(Hwids)))
     {
         LastError = LOG_LAST_ERROR(L"Failed to set adapter hardware ID");
@@ -475,7 +480,7 @@ DriverInstall(HDEVINFO *DevInfoExistingAdaptersForCleanup, SP_DEVINFO_DATA_LIST 
             if (DevInfoExistingAdapters == INVALID_HANDLE_VALUE)
             {
                 DevInfoExistingAdapters = SetupDiGetClassDevsExW(
-                    &GUID_DEVCLASS_NET, WIREGUARD_ENUMERATOR, NULL, DIGCF_PRESENT, NULL, NULL, NULL);
+                    &GUID_DEVCLASS_NET, AMNEZIAWG_ENUMERATOR, NULL, DIGCF_PRESENT, NULL, NULL, NULL);
                 if (DevInfoExistingAdapters == INVALID_HANDLE_VALUE)
                 {
                     LastError = LOG_LAST_ERROR(L"Failed to get present adapters");
@@ -484,12 +489,12 @@ DriverInstall(HDEVINFO *DevInfoExistingAdaptersForCleanup, SP_DEVINFO_DATA_LIST 
                 }
                 _Analysis_assume_(DevInfoExistingAdapters != NULL);
                 DisableAllOurAdapters(DevInfoExistingAdapters, &ExistingAdapters);
-                LOG(WIREGUARD_LOG_INFO, L"Waiting for existing driver to unload from kernel");
-                if (!EnsureWireGuardUnloaded())
-                    LOG(WIREGUARD_LOG_WARN,
+                LOG(AMNEZIAWG_LOG_INFO, L"Waiting for existing driver to unload from kernel");
+                if (!EnsureAmneziaWGUnloaded())
+                    LOG(AMNEZIAWG_LOG_WARN,
                         L"Failed to unload existing driver, which means a reboot will likely be required");
             }
-            LOG(WIREGUARD_LOG_INFO,
+            LOG(AMNEZIAWG_LOG_INFO,
                 L"Removing existing driver %u.%u",
                 (DWORD)((DrvInfoData.DriverVersion & 0xffff000000000000) >> 48),
                 (DWORD)((DrvInfoData.DriverVersion & 0x0000ffff00000000) >> 32));
@@ -499,7 +504,7 @@ DriverInstall(HDEVINFO *DevInfoExistingAdaptersForCleanup, SP_DEVINFO_DATA_LIST 
             DrvInfoDetailData->cbSize = sizeof(SP_DRVINFO_DETAIL_DATA_W);
             if (!SetupDiGetDriverInfoDetailW(DevInfo, &DevInfoData, &DrvInfoData, DrvInfoDetailData, Size, &Size))
             {
-                LOG(WIREGUARD_LOG_WARN, L"Failed getting adapter driver info detail");
+                LOG(AMNEZIAWG_LOG_WARN, L"Failed getting adapter driver info detail");
                 continue;
             }
             LPWSTR InfFileName = PathFindFileNameW(DrvInfoDetailData->InfFileName);
@@ -516,7 +521,7 @@ DriverInstall(HDEVINFO *DevInfoExistingAdaptersForCleanup, SP_DEVINFO_DATA_LIST 
 
     if (DriverVersion)
     {
-        LOG(WIREGUARD_LOG_INFO,
+        LOG(AMNEZIAWG_LOG_INFO,
             L"Using existing driver %u.%u",
             (DWORD)((DriverVersion & 0xffff000000000000) >> 48),
             (DWORD)((DriverVersion & 0x0000ffff00000000) >> 32));
@@ -524,7 +529,7 @@ DriverInstall(HDEVINFO *DevInfoExistingAdaptersForCleanup, SP_DEVINFO_DATA_LIST 
         goto cleanupExistingAdapters;
     }
 
-    LOG(WIREGUARD_LOG_INFO,
+    LOG(AMNEZIAWG_LOG_INFO,
         L"Installing driver %u.%u",
         (DWORD)((OurDriverVersion & 0xffff000000000000) >> 48),
         (DWORD)((OurDriverVersion & 0x0000ffff00000000) >> 32));
@@ -538,9 +543,9 @@ DriverInstall(HDEVINFO *DevInfoExistingAdaptersForCleanup, SP_DEVINFO_DATA_LIST 
     WCHAR CatPath[MAX_PATH] = { 0 };
     WCHAR SysPath[MAX_PATH] = { 0 };
     WCHAR InfPath[MAX_PATH] = { 0 };
-    if (!PathCombineW(CatPath, RandomTempSubDirectory, L"wireguard.cat") ||
-        !PathCombineW(SysPath, RandomTempSubDirectory, L"wireguard.sys") ||
-        !PathCombineW(InfPath, RandomTempSubDirectory, L"wireguard.inf"))
+    if (!PathCombineW(CatPath, RandomTempSubDirectory, L"amneziawg.cat") ||
+        !PathCombineW(SysPath, RandomTempSubDirectory, L"amneziawg.sys") ||
+        !PathCombineW(InfPath, RandomTempSubDirectory, L"amneziawg.inf"))
     {
         LastError = ERROR_BUFFER_OVERFLOW;
         goto cleanupDirectory;
@@ -549,21 +554,21 @@ DriverInstall(HDEVINFO *DevInfoExistingAdaptersForCleanup, SP_DEVINFO_DATA_LIST 
     WCHAR *CatSource, *SysSource, *InfSource;
     if (NativeMachine == IMAGE_FILE_PROCESS)
     {
-        CatSource = L"wireguard.cat";
-        SysSource = L"wireguard.sys";
-        InfSource = L"wireguard.inf";
+        CatSource = L"amneziawg.cat";
+        SysSource = L"amneziawg.sys";
+        InfSource = L"amneziawg.inf";
     }
     else if (NativeMachine == IMAGE_FILE_MACHINE_AMD64)
     {
-        CatSource = L"wireguard-amd64.cat";
-        SysSource = L"wireguard-amd64.sys";
-        InfSource = L"wireguard-amd64.inf";
+        CatSource = L"amneziawg-amd64.cat";
+        SysSource = L"amneziawg-amd64.sys";
+        InfSource = L"amneziawg-amd64.inf";
     }
     else if (NativeMachine == IMAGE_FILE_MACHINE_ARM64)
     {
-        CatSource = L"wireguard-arm64.cat";
-        SysSource = L"wireguard-arm64.sys";
-        InfSource = L"wireguard-arm64.inf";
+        CatSource = L"amneziawg-arm64.cat";
+        SysSource = L"amneziawg-arm64.sys";
+        InfSource = L"amneziawg-arm64.inf";
     }
     else
     {
@@ -571,7 +576,7 @@ DriverInstall(HDEVINFO *DevInfoExistingAdaptersForCleanup, SP_DEVINFO_DATA_LIST 
         goto cleanupDirectory;
     }
 
-    LOG(WIREGUARD_LOG_INFO, L"Extracting driver");
+    LOG(AMNEZIAWG_LOG_INFO, L"Extracting driver");
     if (!ResourceCopyToFile(CatPath, CatSource) || !ResourceCopyToFile(SysPath, SysSource) ||
         !ResourceCopyToFile(InfPath, InfSource))
     {
@@ -579,7 +584,7 @@ DriverInstall(HDEVINFO *DevInfoExistingAdaptersForCleanup, SP_DEVINFO_DATA_LIST 
         goto cleanupDelete;
     }
 
-    LOG(WIREGUARD_LOG_INFO, L"Installing driver");
+    LOG(AMNEZIAWG_LOG_INFO, L"Installing driver");
     if (!SetupCopyOEMInfW(InfPath, NULL, SPOST_NONE, 0, NULL, 0, NULL, NULL))
         LastError = LOG_LAST_ERROR(L"Could not install driver %s to store", InfPath);
 
@@ -605,7 +610,8 @@ cleanupDriverInstallationLock:
 }
 
 _Use_decl_annotations_
-BOOL WINAPI WireGuardDeleteDriver(VOID)
+BOOL WINAPI
+AmneziaWGDeleteDriver(VOID)
 {
     DWORD LastError = ERROR_SUCCESS;
 
@@ -614,7 +620,7 @@ BOOL WINAPI WireGuardDeleteDriver(VOID)
     HANDLE DriverInstallationLock = NamespaceTakeDriverInstallationMutex();
     if (!DriverInstallationLock)
     {
-        LastError = LOG(WIREGUARD_LOG_ERR, L"Failed to take driver installation mutex");
+        LastError = LOG(AMNEZIAWG_LOG_ERR, L"Failed to take driver installation mutex");
         goto cleanup;
     }
 
@@ -626,12 +632,12 @@ BOOL WINAPI WireGuardDeleteDriver(VOID)
     }
     SP_DEVINFO_DATA DevInfoData = { .cbSize = sizeof(DevInfoData) };
     if (!SetupDiCreateDeviceInfoW(
-            DevInfo, WIREGUARD_HWID, &GUID_DEVCLASS_NET, NULL, NULL, DICD_GENERATE_ID, &DevInfoData))
+            DevInfo, AMNEZIAWG_HWID, &GUID_DEVCLASS_NET, NULL, NULL, DICD_GENERATE_ID, &DevInfoData))
     {
         LastError = LOG_LAST_ERROR(L"Failed to create new device information element");
         goto cleanupDevInfo;
     }
-    static const WCHAR Hwids[_countof(WIREGUARD_HWID) + 1 /*Multi-string terminator*/] = WIREGUARD_HWID;
+    static const WCHAR Hwids[_countof(AMNEZIAWG_HWID) + 1 /*Multi-string terminator*/] = AMNEZIAWG_HWID;
     if (!SetupDiSetDeviceRegistryPropertyW(DevInfo, &DevInfoData, SPDRP_HARDWAREID, (const BYTE *)Hwids, sizeof(Hwids)))
     {
         LastError = LOG_LAST_ERROR(L"Failed to set adapter hardware ID");
@@ -657,11 +663,11 @@ BOOL WINAPI WireGuardDeleteDriver(VOID)
         DrvInfoDetailData->cbSize = sizeof(SP_DRVINFO_DETAIL_DATA_W);
         if (!SetupDiGetDriverInfoDetailW(DevInfo, &DevInfoData, &DrvInfoData, DrvInfoDetailData, Size, &Size))
         {
-            LOG(WIREGUARD_LOG_WARN, L"Failed getting adapter driver info detail");
+            LOG(AMNEZIAWG_LOG_WARN, L"Failed getting adapter driver info detail");
             continue;
         }
         LPCWSTR Path = PathFindFileNameW(DrvInfoDetailData->InfFileName);
-        LOG(WIREGUARD_LOG_INFO, L"Removing driver %s", Path);
+        LOG(AMNEZIAWG_LOG_INFO, L"Removing driver %s", Path);
         if (!SetupUninstallOEMInfW(Path, 0, NULL))
         {
             LOG_LAST_ERROR(L"Unable to remove driver %s", Path);

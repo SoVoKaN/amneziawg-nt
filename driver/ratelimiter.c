@@ -195,7 +195,8 @@ cleanupEntryCache:
 }
 
 _Use_decl_annotations_
-VOID RatelimiterUnload(VOID)
+VOID
+RatelimiterUnload(VOID)
 {
     KeSetEvent(&RatelimiterGcEntriesThread.Terminate, IO_NO_INCREMENT, TRUE);
     KeWaitForSingleObject(RatelimiterGcEntriesThread.Thread, Executive, KernelMode, FALSE, NULL);

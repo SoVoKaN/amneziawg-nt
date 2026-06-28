@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #include "interlocked.h"
@@ -30,7 +31,7 @@ IpInterfaceChangeNotification(
         (NotificationType == MibParameterNotification && (!Row->NlMtu || Row->NlMtu == ~0U)))
         return;
     MuAcquirePushLockShared(&DeviceListLock);
-    WG_DEVICE *IterWg, *Wg = NULL;
+    AWG_DEVICE *IterWg, *Wg = NULL;
     LIST_FOR_EACH_ENTRY (IterWg, &DeviceList, DeviceList)
     {
         if (IterWg->InterfaceLuid.Value == Row->InterfaceLuid.Value)
@@ -69,7 +70,7 @@ cleanupDeviceListLock:
 
 static_assert(
     FIELD_SIZE(MIB_IPINTERFACE_ROW, NlMtu) == FIELD_SIZE(NSI_IP_INTERFACE_RW, NlMtu) &&
-    FIELD_SIZE(MIB_IPINTERFACE_ROW, NlMtu) == FIELD_SIZE(NSI_IP_SUBINTERFACE_RW, NlMtu),
+        FIELD_SIZE(MIB_IPINTERFACE_ROW, NlMtu) == FIELD_SIZE(NSI_IP_SUBINTERFACE_RW, NlMtu),
     "NlMtu sizes must match across MIB_IPINTERFACE_ROW, NSI_IP_INTERFACE_RW, and NSI_IP_SUBINTERFACE_RW");
 
 _Success_(return)
@@ -117,10 +118,13 @@ TryBuildMTURow(_In_ IRP *Irp, _Out_ MIB_IPINTERFACE_ROW *Row)
             return FALSE;
         ULONG MtuOffset;
         if ((ULONG)Params.ObjectIndex == NlInterfaceObject &&
-            Params.RwParameterStructLength >= FIELD_OFFSET(NSI_IP_INTERFACE_RW, NlMtu) + FIELD_SIZE(NSI_IP_INTERFACE_RW, NlMtu))
+            Params.RwParameterStructLength >=
+                FIELD_OFFSET(NSI_IP_INTERFACE_RW, NlMtu) + FIELD_SIZE(NSI_IP_INTERFACE_RW, NlMtu))
             MtuOffset = FIELD_OFFSET(NSI_IP_INTERFACE_RW, NlMtu);
-        else if ((ULONG)Params.ObjectIndex == NlSubInterfaceObject &&
-                 Params.RwParameterStructLength >= FIELD_OFFSET(NSI_IP_SUBINTERFACE_RW, NlMtu) + FIELD_SIZE(NSI_IP_SUBINTERFACE_RW, NlMtu))
+        else if (
+            (ULONG)Params.ObjectIndex == NlSubInterfaceObject &&
+            Params.RwParameterStructLength >=
+                FIELD_OFFSET(NSI_IP_SUBINTERFACE_RW, NlMtu) + FIELD_SIZE(NSI_IP_SUBINTERFACE_RW, NlMtu))
             MtuOffset = FIELD_OFFSET(NSI_IP_SUBINTERFACE_RW, NlMtu);
         else
             return FALSE;
@@ -134,7 +138,10 @@ TryBuildMTURow(_In_ IRP *Irp, _Out_ MIB_IPINTERFACE_ROW *Row)
             ProbeForRead((UCHAR *)Params.RwParameterStruct + MtuOffset, sizeof(Row->NlMtu), 1);
         RtlCopyMemory(&Row->NlMtu, (UCHAR *)Params.RwParameterStruct + MtuOffset, sizeof(Row->NlMtu));
     }
-    __except (EXCEPTION_EXECUTE_HANDLER) { return FALSE; }
+    __except (EXCEPTION_EXECUTE_HANDLER)
+    {
+        return FALSE;
+    }
     if (!Row->NlMtu || Row->NlMtu == ~0U)
         return FALSE;
     if (RtlEqualMemory(&NPI_MS_IPV4_MODULEID, &ModuleId, sizeof(ModuleId)))
@@ -266,7 +273,7 @@ NsiDriverEntry(DRIVER_OBJECT *DriverObject)
 
 _Use_decl_annotations_
 NTSTATUS
-NsiActivate(WG_DEVICE *Wg)
+NsiActivate(AWG_DEVICE *Wg)
 {
     NTSTATUS Status;
     MuAcquirePushLockExclusive(&FilterLock);
@@ -288,7 +295,7 @@ NsiActivate(WG_DEVICE *Wg)
 
 _Use_decl_annotations_
 VOID
-NsiDeactivate(WG_DEVICE *Wg)
+NsiDeactivate(AWG_DEVICE *Wg)
 {
     MuAcquirePushLockExclusive(&FilterLock);
     MuAcquirePushLockExclusive(&DeviceListLock);

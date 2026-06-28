@@ -9,7 +9,7 @@
 - We should switch to using `METHOD_NEITHER`
 - One param is a pointer to a ULONG64 length, the other the actual buffer
 
-### Rearrange and regroup `WG_DEVICE`
+### Rearrange and regroup `AWG_DEVICE`
 - Most commonly used members should be at the top
 - Members used together should be next to each other
 - Holes should be minimized

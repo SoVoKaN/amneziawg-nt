@@ -140,7 +140,7 @@ ProcessStderr(_In_ HANDLE Stderr)
     WCHAR Msg[0x200], Buf[0x220], LevelRune;
     DWORD64 Timestamp;
     DWORD SizeRead;
-    WIREGUARD_LOGGER_LEVEL Level;
+    AMNEZIAWG_LOGGER_LEVEL Level;
     for (;;)
     {
         if (!ReadFile(Stderr, Buf, sizeof(Buf), &SizeRead, NULL) || !SizeRead)
@@ -150,8 +150,8 @@ ProcessStderr(_In_ HANDLE Stderr)
         Msg[0] = Buf[SizeRead / sizeof(*Buf) - 1] = L'\0';
         if (swscanf_s(Buf, L"[%c %I64u] %[^\n]", &LevelRune, 1, &Timestamp, Msg, (DWORD)_countof(Msg)) != 3 || !Msg[0])
             return ERROR_INVALID_DATA;
-        if (!((Level = WIREGUARD_LOG_INFO, LevelRune == L'+') || (Level = WIREGUARD_LOG_WARN, LevelRune == L'-') ||
-              (Level = WIREGUARD_LOG_ERR, LevelRune == L'!')))
+        if (!((Level = AMNEZIAWG_LOG_INFO, LevelRune == L'+') || (Level = AMNEZIAWG_LOG_WARN, LevelRune == L'-') ||
+              (Level = AMNEZIAWG_LOG_ERR, LevelRune == L'!')))
             return ERROR_INVALID_DATA;
         Logger(Level, Timestamp, Msg);
     }
@@ -182,7 +182,7 @@ ExecuteRunDll32(
     WCHAR RandomTempSubDirectory[MAX_PATH];
     if (!ResourceCreateTemporaryDirectory(RandomTempSubDirectory))
     {
-        LOG(WIREGUARD_LOG_ERR, L"Failed to create temporary folder");
+        LOG(AMNEZIAWG_LOG_ERR, L"Failed to create temporary folder");
         return FALSE;
     }
     WCHAR DllPath[MAX_PATH] = { 0 };
@@ -191,23 +191,23 @@ ExecuteRunDll32(
         LastError = ERROR_BUFFER_OVERFLOW;
         goto cleanupDirectory;
     }
-    LPCWSTR WireGuardDllResourceName;
+    LPCWSTR AmneziaWGDllResourceName;
     switch (NativeMachine)
     {
     case IMAGE_FILE_MACHINE_AMD64:
-        WireGuardDllResourceName = L"setupapihost-amd64.dll";
+        AmneziaWGDllResourceName = L"setupapihost-amd64.dll";
         break;
     case IMAGE_FILE_MACHINE_ARM64:
-        WireGuardDllResourceName = L"setupapihost-arm64.dll";
+        AmneziaWGDllResourceName = L"setupapihost-arm64.dll";
         break;
     default:
-        LOG(WIREGUARD_LOG_ERR, L"Unsupported platform 0x%x", NativeMachine);
+        LOG(AMNEZIAWG_LOG_ERR, L"Unsupported platform 0x%x", NativeMachine);
         LastError = ERROR_NOT_SUPPORTED;
         goto cleanupDirectory;
     }
-    if (!ResourceCopyToFile(DllPath, WireGuardDllResourceName))
+    if (!ResourceCopyToFile(DllPath, AmneziaWGDllResourceName))
     {
-        LastError = LOG(WIREGUARD_LOG_ERR, L"Failed to copy resource %s to %s", WireGuardDllResourceName, DllPath);
+        LastError = LOG(AMNEZIAWG_LOG_ERR, L"Failed to copy resource %s to %s", AmneziaWGDllResourceName, DllPath);
         goto cleanupDelete;
     }
     size_t CommandLineLen = 10 + MAX_PATH + 2 + wcslen(Arguments) + 1 + wcslen(Function) + 1;
@@ -227,7 +227,7 @@ ExecuteRunDll32(
             Function,
             Arguments) == -1)
     {
-        LOG(WIREGUARD_LOG_ERR, L"Command line too long");
+        LOG(AMNEZIAWG_LOG_ERR, L"Command line too long");
         LastError = ERROR_INVALID_PARAMETER;
         goto cleanupDelete;
     }
@@ -311,9 +311,13 @@ cleanupDirectory:
 
 static _Return_type_success_(return != FALSE)
 BOOL
-InvokeClassInstaller(_In_ LPCWSTR Action, _In_ LPCWSTR Function, _In_ HDEVINFO DevInfo, _In_ SP_DEVINFO_DATA *DevInfoData)
+InvokeClassInstaller(
+    _In_ LPCWSTR Action,
+    _In_ LPCWSTR Function,
+    _In_ HDEVINFO DevInfo,
+    _In_ SP_DEVINFO_DATA *DevInfoData)
 {
-    LOG(WIREGUARD_LOG_INFO, L"Spawning native process to %s instance", Action);
+    LOG(AMNEZIAWG_LOG_INFO, L"Spawning native process to %s instance", Action);
 
     WCHAR InstanceId[MAX_DEVICE_ID_LEN];
     DWORD RequiredChars = _countof(InstanceId);

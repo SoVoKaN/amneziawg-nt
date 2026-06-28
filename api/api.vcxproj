@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Label="Globals">
     <ProjectGuid>{99648503-7DFB-4C06-A87A-E7B66E93FF84}</ProjectGuid>
     <RootNamespace>api</RootNamespace>
@@ -9,9 +9,9 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <PlatformToolset>WindowsApplicationForDrivers10.0</PlatformToolset>
   </PropertyGroup>
-  <Import Project="..\wireguard-nt.props" />
+  <Import Project="..\amneziawg-nt.props" />
   <PropertyGroup>
-    <TargetName>wireguard</TargetName>
+    <TargetName>amneziawg</TargetName>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
   </PropertyGroup>
   <ItemDefinitionGroup>
@@ -26,9 +26,9 @@
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ResourceCompile>
-      <AdditionalIncludeDirectories>..\$(Configuration)\$(WireGuardPlatform);..\$(Configuration);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions Condition="Exists('..\$(Configuration)\arm64\driver\wireguard.sys') And Exists('..\$(Configuration)\arm64\setupapihost.dll')">BUILT_ARM64_WOW64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="Exists('..\$(Configuration)\amd64\driver\wireguard.sys') And Exists('..\$(Configuration)\amd64\setupapihost.dll')">BUILT_AMD64_WOW64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\$(Configuration)\$(AmneziaWGPlatform);..\$(Configuration);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="Exists('..\$(Configuration)\arm64\driver\amneziawg.sys') And Exists('..\$(Configuration)\arm64\setupapihost.dll')">BUILT_ARM64_WOW64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="Exists('..\$(Configuration)\amd64\driver\amneziawg.sys') And Exists('..\$(Configuration)\amd64\setupapihost.dll')">BUILT_AMD64_WOW64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Platform)'=='Win32'">WANT_ARM64_WOW64;WANT_AMD64_WOW64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Platform)'=='x64'">WANT_ARM64_WOW64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Platform)'=='ARM'">WANT_ARM64_WOW64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -60,7 +60,7 @@
     <ClInclude Include="registry.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="rundll32.h" />
-    <ClInclude Include="wireguard.h" />
+    <ClInclude Include="amneziawg.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.c" />
@@ -73,17 +73,17 @@
     <ClCompile Include="configuration.c" />
     <ClCompile Include="rundll32.c" />
   </ItemGroup>
-  <Import Project="..\wireguard-nt.props.user" Condition="exists('..\wireguard-nt.props.user')" />
+  <Import Project="..\amneziawg-nt.props.user" Condition="exists('..\amneziawg-nt.props.user')" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
   <PropertyGroup>
     <CleanDependsOn>CleanInfVersion;CleanNci;$(CleanDependsOn)</CleanDependsOn>
   </PropertyGroup>
-  <Target Name="BuildInfVersion" BeforeTargets="ClCompile" Inputs="$(OutDir)driver\wireguard.inf" Outputs="$(IntDir)wireguard-inf.h">
-    <Exec Command="cscript.exe /nologo &quot;extract-driverver.js&quot; &lt; &quot;$(OutDir)driver\wireguard.inf&quot; &gt; &quot;$(IntDir)wireguard-inf.h&quot;" />
+  <Target Name="BuildInfVersion" BeforeTargets="ClCompile" Inputs="$(OutDir)driver\amneziawg.inf" Outputs="$(IntDir)amneziawg-inf.h">
+    <Exec Command="cscript.exe /nologo &quot;extract-driverver.js&quot; &lt; &quot;$(OutDir)driver\amneziawg.inf&quot; &gt; &quot;$(IntDir)amneziawg-inf.h&quot;" />
   </Target>
   <Target Name="CleanInfVersion">
-    <Delete Files="$(IntDir)wireguard-inf.h" />
+    <Delete Files="$(IntDir)amneziawg-inf.h" />
   </Target>
   <Target Name="BuildNci" BeforeTargets="Link" Inputs="$(ProjectDir)nci.def;$(ProjectDir)nci.h" Outputs="$(IntDir)nci.lib">
     <Exec Command="cl.exe /nologo /DGENERATE_LIB /Ob0 /c /Fo&quot;$(IntDir)nci.obj&quot; /Tc &quot;nci.h&quot;" />

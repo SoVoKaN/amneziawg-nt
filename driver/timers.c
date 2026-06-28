@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #include "interlocked.h"
@@ -92,7 +93,7 @@ GenerateJitter(_In_ ULONG Range)
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 static inline VOID
-ModPeerTimer(_In_ WG_PEER *Peer, _Inout_ TIMER *Timer, _In_ LONG64 Expires)
+ModPeerTimer(_In_ AWG_PEER *Peer, _Inout_ TIMER *Timer, _In_ LONG64 Expires)
 {
     if (!ReadBooleanNoFence(&Peer->Device->IsUp) || !ExAcquireRundownProtection(&Peer->InUse))
         return;
@@ -105,7 +106,7 @@ _Use_decl_annotations_
 static VOID
 ExpiredRetransmitHandshake(TIMER *Timer)
 {
-    WG_PEER *Peer = CONTAINING_RECORD(Timer, WG_PEER, TimerRetransmitHandshake);
+    AWG_PEER *Peer = CONTAINING_RECORD(Timer, AWG_PEER, TimerRetransmitHandshake);
 
     if (Peer->TimerHandshakeAttempts > MAX_TIMER_HANDSHAKES)
     {
@@ -157,7 +158,7 @@ _Use_decl_annotations_
 static VOID
 ExpiredSendKeepalive(TIMER *Timer)
 {
-    WG_PEER *Peer = CONTAINING_RECORD(Timer, WG_PEER, TimerSendKeepalive);
+    AWG_PEER *Peer = CONTAINING_RECORD(Timer, AWG_PEER, TimerSendKeepalive);
 
     PacketSendKeepalive(Peer);
     if (Peer->TimerNeedAnotherKeepalive)
@@ -172,7 +173,7 @@ _Use_decl_annotations_
 static VOID
 ExpiredNewHandshake(TIMER *Timer)
 {
-    WG_PEER *Peer = CONTAINING_RECORD(Timer, WG_PEER, TimerNewHandshake);
+    AWG_PEER *Peer = CONTAINING_RECORD(Timer, AWG_PEER, TimerNewHandshake);
 
     CHAR EndpointStr[SOCKADDR_STR_MAX_LEN];
     SockaddrToString(EndpointStr, &Peer->Endpoint.Addr);
@@ -194,7 +195,7 @@ _Use_decl_annotations_
 static VOID
 ExpiredZeroKeyMaterial(TIMER *Timer)
 {
-    WG_PEER *Peer = CONTAINING_RECORD(Timer, WG_PEER, TimerZeroKeyMaterial);
+    AWG_PEER *Peer = CONTAINING_RECORD(Timer, AWG_PEER, TimerZeroKeyMaterial);
 
     if (!ExAcquireRundownProtection(&Peer->InUse))
         return;
@@ -226,7 +227,7 @@ _Use_decl_annotations_
 static VOID
 ExpiredSendPersistentKeepalive(TIMER *Timer)
 {
-    WG_PEER *Peer = CONTAINING_RECORD(Timer, WG_PEER, TimerPersistentKeepalive);
+    AWG_PEER *Peer = CONTAINING_RECORD(Timer, AWG_PEER, TimerPersistentKeepalive);
 
     if (Peer->PersistentKeepaliveInterval)
         PacketSendKeepalive(Peer);
@@ -235,7 +236,7 @@ ExpiredSendPersistentKeepalive(TIMER *Timer)
 /* Should be called after an authenticated data packet is sent. */
 _Use_decl_annotations_
 VOID
-TimersDataSent(WG_PEER *Peer)
+TimersDataSent(AWG_PEER *Peer)
 {
     if (!TimerIsPending(&Peer->TimerNewHandshake))
         ModPeerTimer(
@@ -248,7 +249,7 @@ TimersDataSent(WG_PEER *Peer)
 /* Should be called after an authenticated data packet is received. */
 _Use_decl_annotations_
 VOID
-TimersDataReceived(WG_PEER *Peer)
+TimersDataReceived(AWG_PEER *Peer)
 {
     if (ReadBooleanNoFence(&Peer->Device->IsUp))
     {
@@ -264,7 +265,7 @@ TimersDataReceived(WG_PEER *Peer)
  */
 _Use_decl_annotations_
 VOID
-TimersAnyAuthenticatedPacketSent(WG_PEER *Peer)
+TimersAnyAuthenticatedPacketSent(AWG_PEER *Peer)
 {
     TimerDelete(&Peer->TimerSendKeepalive);
 }
@@ -274,7 +275,7 @@ TimersAnyAuthenticatedPacketSent(WG_PEER *Peer)
  */
 _Use_decl_annotations_
 VOID
-TimersAnyAuthenticatedPacketReceived(WG_PEER *Peer)
+TimersAnyAuthenticatedPacketReceived(AWG_PEER *Peer)
 {
     TimerDelete(&Peer->TimerNewHandshake);
 }
@@ -282,7 +283,7 @@ TimersAnyAuthenticatedPacketReceived(WG_PEER *Peer)
 /* Should be called after a handshake initiation message is sent. */
 _Use_decl_annotations_
 VOID
-TimersHandshakeInitiated(WG_PEER *Peer)
+TimersHandshakeInitiated(AWG_PEER *Peer)
 {
     ModPeerTimer(
         Peer,
@@ -295,7 +296,7 @@ TimersHandshakeInitiated(WG_PEER *Peer)
  */
 _Use_decl_annotations_
 VOID
-TimersHandshakeComplete(WG_PEER *Peer)
+TimersHandshakeComplete(AWG_PEER *Peer)
 {
     TimerDelete(&Peer->TimerRetransmitHandshake);
     Peer->TimerHandshakeAttempts = 0;
@@ -308,7 +309,7 @@ TimersHandshakeComplete(WG_PEER *Peer)
  */
 _Use_decl_annotations_
 VOID
-TimersSessionDerived(WG_PEER *Peer)
+TimersSessionDerived(AWG_PEER *Peer)
 {
     ModPeerTimer(Peer, &Peer->TimerZeroKeyMaterial, -SEC_TO_SYS_TIME_UNITS(REJECT_AFTER_TIME * 3));
 }
@@ -318,7 +319,7 @@ TimersSessionDerived(WG_PEER *Peer)
  */
 _Use_decl_annotations_
 VOID
-TimersAnyAuthenticatedPacketTraversal(WG_PEER *Peer)
+TimersAnyAuthenticatedPacketTraversal(AWG_PEER *Peer)
 {
     if (Peer->PersistentKeepaliveInterval)
         ModPeerTimer(Peer, &Peer->TimerPersistentKeepalive, -SEC_TO_SYS_TIME_UNITS(Peer->PersistentKeepaliveInterval));
@@ -326,7 +327,7 @@ TimersAnyAuthenticatedPacketTraversal(WG_PEER *Peer)
 
 _Use_decl_annotations_
 VOID
-TimersInit(WG_PEER *Peer)
+TimersInit(AWG_PEER *Peer)
 {
     TimerInit(&Peer->TimerRetransmitHandshake, ExpiredRetransmitHandshake);
     TimerInit(&Peer->TimerSendKeepalive, ExpiredSendKeepalive);
@@ -341,7 +342,7 @@ TimersInit(WG_PEER *Peer)
 
 _Use_decl_annotations_
 VOID
-TimersStop(WG_PEER *Peer)
+TimersStop(AWG_PEER *Peer)
 {
     TimerDelete(&Peer->TimerRetransmitHandshake);
     TimerDelete(&Peer->TimerSendKeepalive);

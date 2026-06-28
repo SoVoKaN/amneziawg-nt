@@ -35,7 +35,8 @@ DelayedLoadLibraryHook(unsigned dliNotify, PDelayLoadInfo pdli)
 
 const PfnDliHook __pfnDliNotifyHook2 = DelayedLoadLibraryHook;
 
-static BOOL InitializeSecurityObjects(VOID)
+static BOOL
+InitializeSecurityObjects(VOID)
 {
     BYTE LocalSystemSid[MAX_SID_SIZE];
     DWORD RequiredBytes = sizeof(LocalSystemSid);
@@ -69,7 +70,8 @@ cleanupProcessToken:
     return Ret;
 }
 
-static void EnvInit(VOID)
+static void
+EnvInit(VOID)
 {
 #ifdef MAYBE_WOW64
     HANDLE Kernel32;

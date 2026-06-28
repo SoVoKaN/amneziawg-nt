@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #include "interlocked.h"
@@ -19,10 +20,10 @@ static LONG64 PeerCounter = 0;
 _Use_decl_annotations_
 NTSTATUS
 PeerCreate(
-    WG_DEVICE *Wg,
+    AWG_DEVICE *Wg,
     CONST UINT8 PublicKey[NOISE_PUBLIC_KEY_LEN],
     CONST UINT8 PresharedKey[NOISE_SYMMETRIC_KEY_LEN],
-    WG_PEER **Peer)
+    AWG_PEER **Peer)
 {
     if (Wg->NumPeers >= MAX_PEERS_PER_DEVICE)
         return STATUS_TOO_MANY_NODES;
@@ -54,8 +55,8 @@ PeerCreate(
 }
 
 _Use_decl_annotations_
-WG_PEER *
-PeerGetMaybeZero(WG_PEER *Peer)
+AWG_PEER *
+PeerGetMaybeZero(AWG_PEER *Peer)
 {
     if (!Peer || !KrefGetUnlessZero(&Peer->Refcount))
         return NULL;
@@ -68,7 +69,7 @@ PeerGetMaybeZero(WG_PEER *Peer)
  */
 _Use_decl_annotations_
 VOID
-PeerRemove(WG_PEER *Peer)
+PeerRemove(AWG_PEER *Peer)
 {
     if (!Peer)
         return;
@@ -90,9 +91,9 @@ PeerRemove(WG_PEER *Peer)
 
 _Use_decl_annotations_
 VOID
-PeerRemoveAll(WG_DEVICE *Wg)
+PeerRemoveAll(AWG_DEVICE *Wg)
 {
-    WG_PEER *Peer, *Temp;
+    AWG_PEER *Peer, *Temp;
 
     /* Avoid having to traverse individually for each one. */
     AllowedIpsFree(&Wg->PeerAllowedIps, &Wg->DeviceUpdateLock);
@@ -110,7 +111,7 @@ _Use_decl_annotations_
 static VOID
 RcuRelease(RCU_CALLBACK *Rcu)
 {
-    WG_PEER *Peer = CONTAINING_RECORD(Rcu, WG_PEER, Rcu);
+    AWG_PEER *Peer = CONTAINING_RECORD(Rcu, AWG_PEER, Rcu);
 
     NT_ASSERT(!PrevQueuePeek(&Peer->TxQueue) && !PrevQueuePeek(&Peer->RxQueue));
 
@@ -124,7 +125,7 @@ RcuRelease(RCU_CALLBACK *Rcu)
 static VOID
 KrefRelease(_In_ KREF *Refcount)
 {
-    WG_PEER *Peer = CONTAINING_RECORD(Refcount, WG_PEER, Refcount);
+    AWG_PEER *Peer = CONTAINING_RECORD(Refcount, AWG_PEER, Refcount);
 
     CHAR EndpointName[SOCKADDR_STR_MAX_LEN];
     SockaddrToString(EndpointName, &Peer->Endpoint.Addr);
@@ -146,7 +147,7 @@ KrefRelease(_In_ KREF *Refcount)
 
 _Use_decl_annotations_
 VOID
-PeerPut(WG_PEER *Peer)
+PeerPut(AWG_PEER *Peer)
 {
     if (!Peer)
         return;
@@ -160,11 +161,12 @@ _Use_decl_annotations_
 NTSTATUS
 PeerDriverEntry(VOID)
 {
-    return ExInitializeLookasideListEx(&PeerCache, NULL, NULL, NonPagedPool, 0, sizeof(WG_PEER), MEMORY_TAG, 0);
+    return ExInitializeLookasideListEx(&PeerCache, NULL, NULL, NonPagedPool, 0, sizeof(AWG_PEER), MEMORY_TAG, 0);
 }
 
 _Use_decl_annotations_
-VOID PeerUnload(VOID)
+VOID
+PeerUnload(VOID)
 {
     ExDeleteLookasideListEx(&PeerCache);
 }

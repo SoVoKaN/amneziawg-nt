@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #include "interlocked.h"
@@ -18,7 +19,7 @@ _IRQL_requires_max_(APC_LEVEL)
 _Requires_lock_not_held_(Peer->Handshake.StaticIdentity->Lock)
 _Requires_lock_not_held_(Peer->Handshake.Lock)
 static VOID
-PacketSendHandshakeInitiation(_Inout_ WG_PEER *Peer)
+PacketSendHandshakeInitiation(_Inout_ AWG_PEER *Peer)
 {
     MESSAGE_HANDSHAKE_INITIATION Packet;
 
@@ -45,12 +46,12 @@ _Use_decl_annotations_
 VOID
 PacketHandshakeTxWorker(MULTICORE_WORKQUEUE *WorkQueue)
 {
-    WG_DEVICE *Wg = CONTAINING_RECORD(WorkQueue, WG_DEVICE, HandshakeTxThreads);
+    AWG_DEVICE *Wg = CONTAINING_RECORD(WorkQueue, AWG_DEVICE, HandshakeTxThreads);
     PEER_SERIAL_ENTRY *Entry;
 
     while ((Entry = PeerSerialDequeue(&Wg->HandshakeTxQueue)) != NULL)
     {
-        WG_PEER *Peer = CONTAINING_RECORD(Entry, WG_PEER, HandshakeTxSerialEntry);
+        AWG_PEER *Peer = CONTAINING_RECORD(Entry, AWG_PEER, HandshakeTxSerialEntry);
         HANDSHAKE_TX_ACTION Action = InterlockedExchange16(&Peer->HandshakeTxAction, HANDSHAKE_TX_NONE);
 
         if (Action == HANDSHAKE_TX_SEND)
@@ -71,7 +72,7 @@ PacketHandshakeTxWorker(MULTICORE_WORKQUEUE *WorkQueue)
 
 _Use_decl_annotations_
 VOID
-PacketSendQueuedHandshakeInitiation(WG_PEER *Peer, BOOLEAN IsRetry)
+PacketSendQueuedHandshakeInitiation(AWG_PEER *Peer, BOOLEAN IsRetry)
 {
     if (!IsRetry)
         Peer->TimerHandshakeAttempts = 0;
@@ -100,7 +101,7 @@ PacketSendQueuedHandshakeInitiation(WG_PEER *Peer, BOOLEAN IsRetry)
 
 _Use_decl_annotations_
 VOID
-PacketSendHandshakeResponse(WG_PEER *Peer)
+PacketSendHandshakeResponse(AWG_PEER *Peer)
 {
     MESSAGE_HANDSHAKE_RESPONSE Packet;
 
@@ -125,7 +126,7 @@ PacketSendHandshakeResponse(WG_PEER *Peer)
 
 _Use_decl_annotations_
 VOID
-PacketSendHandshakeCookie(WG_DEVICE *Wg, CONST NET_BUFFER_LIST *InitiatingNbl, UINT32_LE SenderIndex)
+PacketSendHandshakeCookie(AWG_DEVICE *Wg, CONST NET_BUFFER_LIST *InitiatingNbl, UINT32_LE SenderIndex)
 {
     MESSAGE_HANDSHAKE_COOKIE Packet;
 
@@ -136,7 +137,7 @@ PacketSendHandshakeCookie(WG_DEVICE *Wg, CONST NET_BUFFER_LIST *InitiatingNbl, U
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 static VOID
-KeepKeyFresh(_Inout_ WG_PEER *Peer)
+KeepKeyFresh(_Inout_ AWG_PEER *Peer)
 {
     KIRQL Irql;
     NOISE_KEYPAIR *Keypair;
@@ -174,8 +175,8 @@ CalculateNblPadding(_In_ CONST NET_BUFFER *Nb, _In_ UINT32 Mtu)
 }
 
 #pragma prefast(push)
-#pragma prefast(disable : cpp/drivers/opaque-mdl-write) /* We're intentionally twiddling with MDLs. */
-#pragma prefast(disable : cpp/drivers/opaque-mdl-use) /* We're intentionally twiddling with MDLs. */
+#pragma prefast(disable : cpp / drivers / opaque - mdl - write) /* We're intentionally twiddling with MDLs. */
+#pragma prefast(disable : cpp / drivers / opaque - mdl - use)   /* We're intentionally twiddling with MDLs. */
 _IRQL_requires_max_(DISPATCH_LEVEL)
 _Must_inspect_result_
 static BOOLEAN
@@ -244,7 +245,7 @@ EncryptPacket(
 
 _Use_decl_annotations_
 VOID
-PacketSendKeepalive(WG_PEER *Peer)
+PacketSendKeepalive(AWG_PEER *Peer)
 {
     NET_BUFFER_LIST *Nbl;
 
@@ -265,7 +266,7 @@ PacketSendKeepalive(WG_PEER *Peer)
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
 static VOID
-PacketCreateDataDone(_Inout_ WG_PEER *Peer, _Inout_ NET_BUFFER_LIST *First)
+PacketCreateDataDone(_Inout_ AWG_PEER *Peer, _Inout_ NET_BUFFER_LIST *First)
 {
     BOOLEAN IsKeepalive;
 
@@ -280,7 +281,7 @@ PacketCreateDataDone(_Inout_ WG_PEER *Peer, _Inout_ NET_BUFFER_LIST *First)
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
 static BOOLEAN
-PacketPeerTxWork(_Inout_ WG_PEER *Peer, _In_ ULONG Budget)
+PacketPeerTxWork(_Inout_ AWG_PEER *Peer, _In_ ULONG Budget)
 {
     NOISE_KEYPAIR *Keypair;
     PACKET_STATE State;
@@ -315,14 +316,14 @@ ProcessPerPeerWork(PEER_SERIAL *WorkQueue)
         PeerSerialMaybeRetire(
             WorkQueue,
             Entry,
-            PacketPeerTxWork(CONTAINING_RECORD(Entry, WG_PEER, TxSerialEntry), PEER_XMIT_PACKETS_PER_ROUND));
+            PacketPeerTxWork(CONTAINING_RECORD(Entry, AWG_PEER, TxSerialEntry), PEER_XMIT_PACKETS_PER_ROUND));
 }
 
 _Use_decl_annotations_
 VOID
 PacketEncryptWorker(MULTICORE_WORKQUEUE *WorkQueue)
 {
-    WG_DEVICE *Wg = CONTAINING_RECORD(WorkQueue, WG_DEVICE, EncryptThreads);
+    AWG_DEVICE *Wg = CONTAINING_RECORD(WorkQueue, AWG_DEVICE, EncryptThreads);
     PTR_RING *Ring = &Wg->EncryptQueue;
     NET_BUFFER_LIST *First;
     SIMD_STATE Simd;
@@ -332,7 +333,7 @@ PacketEncryptWorker(MULTICORE_WORKQUEUE *WorkQueue)
     {
         PACKET_STATE State = PACKET_STATE_CRYPTED;
         NOISE_KEYPAIR *Keypair = NET_BUFFER_LIST_KEYPAIR(First);
-        WG_PEER *Peer = NET_BUFFER_LIST_PEER(First);
+        AWG_PEER *Peer = NET_BUFFER_LIST_PEER(First);
         ULONG Mtu = Peer->Endpoint.Addr.si_family == AF_INET6 ? Wg->Mtu6 : Wg->Mtu4;
 
         for (NET_BUFFER_LIST *Nbl = First; Nbl; Nbl = NET_BUFFER_LIST_NEXT_NBL(Nbl))
@@ -361,9 +362,9 @@ PacketEncryptWorker(MULTICORE_WORKQUEUE *WorkQueue)
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 static VOID
-PacketCreateData(_Inout_ WG_PEER *Peer, _In_ NET_BUFFER_LIST *First)
+PacketCreateData(_Inout_ AWG_PEER *Peer, _In_ NET_BUFFER_LIST *First)
 {
-    WG_DEVICE *Wg = Peer->Device;
+    AWG_DEVICE *Wg = Peer->Device;
     NTSTATUS Ret = STATUS_INVALID_PARAMETER;
 
     if (!ExAcquireRundownProtection(&Peer->InUse))
@@ -387,7 +388,7 @@ cleanup:
 
 _Use_decl_annotations_
 VOID
-PacketPurgeStagedPackets(WG_PEER *Peer)
+PacketPurgeStagedPackets(AWG_PEER *Peer)
 {
     KIRQL Irql;
 
@@ -402,7 +403,7 @@ PacketPurgeStagedPackets(WG_PEER *Peer)
 
 _Use_decl_annotations_
 VOID
-PacketSendStagedPackets(WG_PEER *Peer)
+PacketSendStagedPackets(AWG_PEER *Peer)
 {
     NOISE_KEYPAIR *Keypair;
     NET_BUFFER_LIST_QUEUE Packets;
@@ -496,7 +497,7 @@ outNokey:
 
 _Use_decl_annotations_
 VOID
-FreeSendNetBufferList(WG_DEVICE *Wg, NET_BUFFER_LIST *FirstNbl, ULONG SendCompleteFlags)
+FreeSendNetBufferList(AWG_DEVICE *Wg, NET_BUFFER_LIST *FirstNbl, ULONG SendCompleteFlags)
 {
     for (NET_BUFFER_LIST *Nbl = FirstNbl, *NextNbl; Nbl; Nbl = NextNbl)
     {

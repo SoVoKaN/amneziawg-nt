@@ -4,7 +4,7 @@
 
   Copyright (C) 2018-2026 WireGuard LLC. All Rights Reserved.
 -->
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|ARM">
       <Configuration>Debug</Configuration>
@@ -40,7 +40,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <VCProjectVersion>16.0</VCProjectVersion>
+    <VCProjectVersion>17.0</VCProjectVersion>
     <WindowsTargetPlatformVersion>$(LatestTargetPlatformVersion)</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -64,33 +64,33 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <WireGuardVersionMaj>1</WireGuardVersionMaj>
-    <WireGuardVersionMin>1</WireGuardVersionMin>
-    <WireGuardVersionRel>0</WireGuardVersionRel>
+    <AmneziaWGVersionMaj>1</AmneziaWGVersionMaj>
+    <AmneziaWGVersionMin>0</AmneziaWGVersionMin>
+    <AmneziaWGVersionRel>0</AmneziaWGVersionRel>
 
     <!-- Used for versioning, must be n.n[.n[.n]]. -->
-    <WireGuardVersion>$(WireGuardVersionMaj).$(WireGuardVersionMin)</WireGuardVersion>
-    <WireGuardVersion Condition="'$(WireGuardVersionRel)'!='0'">$(WireGuardVersion).$(WireGuardVersionRel)</WireGuardVersion>
+    <AmneziaWGVersion>$(AmneziaWGVersionMaj).$(AmneziaWGVersionMin)</AmneziaWGVersion>
+    <AmneziaWGVersion Condition="'$(AmneziaWGVersionRel)'!='0'">$(AmneziaWGVersion).$(AmneziaWGVersionRel)</AmneziaWGVersion>
 
     <!-- .vcxproj are using different platform names. -->
-    <WireGuardPlatform Condition="'$(Platform)'=='ARM'">arm</WireGuardPlatform>
-    <WireGuardPlatform Condition="'$(Platform)'=='ARM64'">arm64</WireGuardPlatform>
-    <WireGuardPlatform Condition="'$(Platform)'=='Win32'">x86</WireGuardPlatform>
-    <WireGuardPlatform Condition="'$(Platform)'=='x64'">amd64</WireGuardPlatform>
+    <AmneziaWGPlatform Condition="'$(Platform)'=='ARM'">arm</AmneziaWGPlatform>
+    <AmneziaWGPlatform Condition="'$(Platform)'=='ARM64'">arm64</AmneziaWGPlatform>
+    <AmneziaWGPlatform Condition="'$(Platform)'=='Win32'">x86</AmneziaWGPlatform>
+    <AmneziaWGPlatform Condition="'$(Platform)'=='x64'">amd64</AmneziaWGPlatform>
 
-    <IntDir>..\$(Configuration)\$(WireGuardPlatform)\$(ProjectName)-intermediate\</IntDir>
-    <OutDir>..\$(Configuration)\$(WireGuardPlatform)\</OutDir>
+    <IntDir>..\$(Configuration)\$(AmneziaWGPlatform)\$(ProjectName)-intermediate\</IntDir>
+    <OutDir>..\$(Configuration)\$(AmneziaWGPlatform)\</OutDir>
     <OutDir Condition="'$(ConfigurationType)'=='Driver'">$(IntDir)</OutDir>
-    <PackageDir>..\$(Configuration)\$(WireGuardPlatform)\$(ProjectName)\</PackageDir>
+    <PackageDir>..\$(Configuration)\$(AmneziaWGPlatform)\$(ProjectName)\</PackageDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <PreprocessorDefinitions>WIREGUARD_VERSION_MAJ=$(WireGuardVersionMaj);WIREGUARD_VERSION_MIN=$(WireGuardVersionMin);WIREGUARD_VERSION_REL=$(WireGuardVersionRel);WIREGUARD_VERSION="$(WireGuardVersion)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>AMNEZIAWG_VERSION_MAJ=$(AmneziaWGVersionMaj);AMNEZIAWG_VERSION_MIN=$(AmneziaWGVersionMin);AMNEZIAWG_VERSION_REL=$(AmneziaWGVersionRel);AMNEZIAWG_VERSION="$(AmneziaWGVersion)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level4</WarningLevel>
       <AdditionalOptions>/std:clatest %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>WIREGUARD_VERSION_MAJ=$(WireGuardVersionMaj);WIREGUARD_VERSION_MIN=$(WireGuardVersionMin);WIREGUARD_VERSION_REL=$(WireGuardVersionRel);WIREGUARD_VERSION="$(WireGuardVersion)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>AMNEZIAWG_VERSION_MAJ=$(AmneziaWGVersionMaj);AMNEZIAWG_VERSION_MIN=$(AmneziaWGVersionMin);AMNEZIAWG_VERSION_REL=$(AmneziaWGVersionRel);AMNEZIAWG_VERSION="$(AmneziaWGVersion)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <Link>
       <ProgramDatabaseFile>$(OutDir)$(TargetName).pdb</ProgramDatabaseFile>

@@ -27,7 +27,8 @@ __WritePointerRelease(_Out_ _Interlocked_operand_ PVOID volatile *Destination, _
 /* Suppresses warning about strict type matches, which don't quite make sense in this context. */
 #define WritePointerRelease(P, V) __WritePointerRelease((PVOID *)(P), V)
 
-static inline VOID WriteMemoryBarrier(VOID)
+static inline VOID
+WriteMemoryBarrier(VOID)
 {
 #if defined(_ARM64_)
     __dmb(_ARM64_BARRIER_ISHST);
