@@ -13,6 +13,7 @@
 #include "peerlookup.h"
 #include "rcu.h"
 #include "logging.h"
+#include "junk.h"
 #include <ntifs.h> /* Must be included before <wdm.h> */
 #include <wdm.h>
 
@@ -93,6 +94,7 @@ typedef struct _AWG_DEVICE
     ULONG HandshakeRxQueueLen;
     LOG_RING Log;
     LIST_ENTRY DeviceList;
+    JUNK_PACKETS JunkPackets;
 } AWG_DEVICE;
 
 _Requires_lock_held_(Wg->DeviceUpdateLock)

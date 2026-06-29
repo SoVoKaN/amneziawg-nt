@@ -84,6 +84,9 @@
     <ClCompile Include="selftest\chacha20poly1305.c">
       <Filter>Source Files\selftest</Filter>
     </ClCompile>
+    <ClCompile Include="nsi.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="amneziawg.rc">
@@ -154,6 +157,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="logging.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="nsi.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="junk.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

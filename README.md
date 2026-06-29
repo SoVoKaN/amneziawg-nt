@@ -235,7 +235,10 @@ Typedef'd as `AMNEZIAWG_GET_ADAPTER_STATE`.  Gets whether the specified adapter 
 |`WORD`|ListenPort|Port for UDP listen socket, or 0 to choose randomly.|
 |`BYTE[AMNEZIAWG_KEY_LENGTH]`|PrivateKey|Private key of interface.| 
 |`BYTE[AMNEZIAWG_KEY_LENGTH]`|PublicKey|Corresponding public key of private key (unused on set).|
+|`WORD`|JunkCount|Number of junk packets sent before handshake initiation, up to `MAX_JUNK_COUNT`.|
 |`DWORD`|PeersCount|Number of peer structures following this structure.|
+|`WORD`|JunkMinSize|Minimum size in bytes of each junk packet.|
+|`WORD`|JunkMaxSize|Maximum size in bytes of each junk packet.|
 
 ### Structure: `AMNEZIAWG_PEER` - a peer.
 
@@ -275,6 +278,9 @@ These values may be or'd together.
 |`AMNEZIAWG_INTERFACE_HAS_PRIVATE_KEY`|The PrivateKey field is set.|
 |`AMNEZIAWG_INTERFACE_HAS_LISTEN_PORT`|The ListenPort field is set.|
 |`AMNEZIAWG_INTERFACE_REPLACE_PEERS`|Remove all peers before adding new ones (unused on get).|
+|`AMNEZIAWG_INTERFACE_HAS_JUNK_COUNT`|The JunkCount field is set.|
+|`AMNEZIAWG_INTERFACE_HAS_JUNK_MIN_SIZE`|The JunkMinSize field is set.|
+|`AMNEZIAWG_INTERFACE_HAS_JUNK_MAX_SIZE`|The JunkMaxSize field is set.|
 
 ### Enumeration: `AMNEZIAWG_PEER_FLAG` - bitwise flags for peers.
 

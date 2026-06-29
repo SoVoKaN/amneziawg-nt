@@ -300,10 +300,15 @@ SocketSendBufferToPeer(AWG_PEER *Peer, CONST VOID *Buffer, ULONG Len)
         return Status;
     Ctx->Buffer.Length = Len;
     Ctx->Buffer.Offset = 0;
-    Ctx->Buffer.Mdl = MemAllocateDataAndMdlChain(Len);
-    if (!Ctx->Buffer.Mdl)
-        goto cleanupCtx;
-    RtlCopyMemory(MmGetMdlVirtualAddress(Ctx->Buffer.Mdl), Buffer, Len);
+    if (Len)
+    {
+        Ctx->Buffer.Mdl = MemAllocateDataAndMdlChain(Len);
+        if (!Ctx->Buffer.Mdl)
+            goto cleanupCtx;
+        RtlCopyMemory(MmGetMdlVirtualAddress(Ctx->Buffer.Mdl), Buffer, Len);
+    }
+    else
+        Ctx->Buffer.Mdl = NULL;
     Ctx->Wg = Peer->Device;
     IoInitializeIrp(&Ctx->Irp, sizeof(Ctx->IrpBuffer), 1);
     IoSetCompletionRoutine(&Ctx->Irp, BufferSendComplete, Ctx, TRUE, TRUE, TRUE);
