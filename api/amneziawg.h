@@ -257,10 +257,13 @@ struct ALIGNED(8) _AMNEZIAWG_PEER
 
 typedef enum
 {
-    AMNEZIAWG_INTERFACE_HAS_PUBLIC_KEY = 1 << 0,  /**< The PublicKey field is set */
-    AMNEZIAWG_INTERFACE_HAS_PRIVATE_KEY = 1 << 1, /**< The PrivateKey field is set */
-    AMNEZIAWG_INTERFACE_HAS_LISTEN_PORT = 1 << 2, /**< The ListenPort field is set */
-    AMNEZIAWG_INTERFACE_REPLACE_PEERS = 1 << 3    /**< Remove all peers before adding new ones */
+    AMNEZIAWG_INTERFACE_HAS_PUBLIC_KEY = 1 << 0,    /**< The PublicKey field is set */
+    AMNEZIAWG_INTERFACE_HAS_PRIVATE_KEY = 1 << 1,   /**< The PrivateKey field is set */
+    AMNEZIAWG_INTERFACE_HAS_LISTEN_PORT = 1 << 2,   /**< The ListenPort field is set */
+    AMNEZIAWG_INTERFACE_REPLACE_PEERS = 1 << 3,     /**< Remove all peers before adding new ones */
+    AMNEZIAWG_INTERFACE_HAS_JUNK_COUNT = 1 << 4,    /**< The JunkCount field is set */
+    AMNEZIAWG_INTERFACE_HAS_JUNK_MIN_SIZE = 1 << 5, /**< The JunkMinSize field is set */
+    AMNEZIAWG_INTERFACE_HAS_JUNK_MAX_SIZE = 1 << 6  /**< The JunkMaxSize field is set */
 } AMNEZIAWG_INTERFACE_FLAG;
 DEFINE_ENUM_FLAG_OPERATORS(AMNEZIAWG_INTERFACE_FLAG)
 
@@ -271,7 +274,10 @@ struct ALIGNED(8) _AMNEZIAWG_INTERFACE
     WORD ListenPort;                       /**< Port for UDP listen socket, or 0 to choose randomly */
     BYTE PrivateKey[AMNEZIAWG_KEY_LENGTH]; /**< Private key of interface */
     BYTE PublicKey[AMNEZIAWG_KEY_LENGTH];  /**< Corresponding public key of private key */
+    WORD JunkCount;                        /**< Number of junk packets sent before each handshake initiation */
     DWORD PeersCount;                      /**< Number of peer structs following this struct */
+    WORD JunkMinSize;                      /**< Minimum size in bytes of each junk packet */
+    WORD JunkMaxSize;                      /**< Maximum size in bytes of each junk packet */
 };
 
 /**

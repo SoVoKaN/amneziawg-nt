@@ -13,6 +13,9 @@
 #include "logging.h"
 #include <ntddk.h>
 
+#define AWG_IOCTL_INTERFACE_HAS_JUNK \
+    (AWG_IOCTL_INTERFACE_HAS_JUNK_COUNT | AWG_IOCTL_INTERFACE_HAS_JUNK_MIN_SIZE | AWG_IOCTL_INTERFACE_HAS_JUNK_MAX_SIZE)
+
 #define SIZE_OF_EMBEDDED(A, B) \
     FIELD_OFFSET( \
         struct { \
@@ -94,6 +97,28 @@ WgDeviceFromFdo(_In_ DEVICE_OBJECT *DeviceObject)
     return NdisWdfGetAdapterContextFromAdapterHandle(DeviceObject->DeviceExtension);
 }
 
+static inline VOID
+GetJunkPackets(_In_ CONST AWG_DEVICE *Wg, _Inout_ AWG_IOCTL_INTERFACE *IoctlInterface)
+{
+    JUNK_PACKETS Junk = { .Raw = ReadULong64NoFence(&Wg->JunkPackets.Raw) };
+
+    if (Junk.Count != 0)
+    {
+        IoctlInterface->JunkCount = Junk.Count;
+        IoctlInterface->Flags |= AWG_IOCTL_INTERFACE_HAS_JUNK_COUNT;
+    }
+    if (Junk.Size.Min != 0)
+    {
+        IoctlInterface->JunkMinSize = Junk.Size.Min;
+        IoctlInterface->Flags |= AWG_IOCTL_INTERFACE_HAS_JUNK_MIN_SIZE;
+    }
+    if (Junk.Size.Max != 0)
+    {
+        IoctlInterface->JunkMaxSize = Junk.Size.Max;
+        IoctlInterface->Flags |= AWG_IOCTL_INTERFACE_HAS_JUNK_MAX_SIZE;
+    }
+}
+
 _IRQL_requires_max_(PASSIVE_LEVEL)
 static VOID
 Get(_In_ DEVICE_OBJECT *DeviceObject, _Inout_ IRP *Irp)
@@ -141,6 +166,7 @@ Get(_In_ DEVICE_OBJECT *DeviceObject, _Inout_ IRP *Irp)
             IoctlInterface->Flags |= AWG_IOCTL_INTERFACE_HAS_PUBLIC_KEY | AWG_IOCTL_INTERFACE_HAS_PRIVATE_KEY;
         }
         MuReleasePushLockShared(&Wg->StaticIdentity.Lock);
+        GetJunkPackets(Wg, IoctlInterface);
     }
 
     AWG_IOCTL_PEER *IoctlPeer = (AWG_IOCTL_PEER *)((UCHAR *)IoctlInterface + sizeof(AWG_IOCTL_INTERFACE));
@@ -207,6 +233,38 @@ Get(_In_ DEVICE_OBJECT *DeviceObject, _Inout_ IRP *Irp)
                            : FinalSize <= MAXULONG ? STATUS_BUFFER_OVERFLOW
                                                    : STATUS_SECTION_TOO_BIG;
     Irp->IoStatus.Information = (ULONG_PTR)FinalSize;
+}
+
+_Requires_lock_held_(Wg->DeviceUpdateLock)
+static inline JUNK_PACKETS
+MergeJunkPackets(_In_ CONST AWG_DEVICE *Wg, _In_ CONST AWG_IOCTL_INTERFACE *IoctlInterface)
+{
+    JUNK_PACKETS Junk = { .Raw = Wg->JunkPackets.Raw };
+    if (IoctlInterface->Flags & AWG_IOCTL_INTERFACE_HAS_JUNK_COUNT)
+        Junk.Count = IoctlInterface->JunkCount;
+    if (IoctlInterface->Flags & AWG_IOCTL_INTERFACE_HAS_JUNK_MIN_SIZE)
+        Junk.Size.Min = IoctlInterface->JunkMinSize;
+    if (IoctlInterface->Flags & AWG_IOCTL_INTERFACE_HAS_JUNK_MAX_SIZE)
+        Junk.Size.Max = IoctlInterface->JunkMaxSize;
+    return Junk;
+}
+
+_Must_inspect_result_
+static inline NTSTATUS
+ValidateJunkPackets(_In_ CONST JUNK_PACKETS Junk)
+{
+    if (Junk.Count > MAX_JUNK_COUNT)
+        return STATUS_INVALID_PARAMETER;
+    if (Junk.Size.Min > Junk.Size.Max)
+        return STATUS_INVALID_PARAMETER;
+    return STATUS_SUCCESS;
+}
+
+_Requires_lock_held_(Wg->DeviceUpdateLock)
+static inline VOID
+SetJunkPackets(_Inout_ AWG_DEVICE *Wg, _In_ CONST JUNK_PACKETS Junk)
+{
+    Wg->JunkPackets.Raw = Junk.Raw;
 }
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
@@ -427,6 +485,12 @@ cleanupStack:
     return Status;
 }
 
+/* C4701 false positive: ProposedJunk is written and read under the same HAS_JUNK flag, so the
+ * uninitialized read the analyzer warns about is unreachable; it simply cannot correlate the write
+ * guard with the read guard. C4701 comes from whole-function data-flow analysis, so the suppression
+ * must stay active across the entire function rather than at a single line. */
+#pragma warning(push)
+#pragma warning(disable : 4701)
 _IRQL_requires_max_(PASSIVE_LEVEL)
 static NTSTATUS
 SetInterface(
@@ -443,6 +507,16 @@ SetInterface(
     MuAcquirePushLockExclusive(&Wg->DeviceUpdateLock);
 
     NTSTATUS Status;
+
+    JUNK_PACKETS ProposedJunk;
+    if (IoctlInterface.Flags & AWG_IOCTL_INTERFACE_HAS_JUNK)
+    {
+        ProposedJunk = MergeJunkPackets(Wg, &IoctlInterface);
+        Status = ValidateJunkPackets(ProposedJunk);
+        if (!NT_SUCCESS(Status))
+            goto cleanupLock;
+    }
+
     if (IoctlInterface.Flags & AWG_IOCTL_INTERFACE_HAS_LISTEN_PORT)
     {
         Status = SetListenPort(Wg, IoctlInterface.ListenPort);
@@ -460,6 +534,9 @@ SetInterface(
             goto cleanupLock;
     }
 
+    if (IoctlInterface.Flags & AWG_IOCTL_INTERFACE_HAS_JUNK)
+        SetJunkPackets(Wg, ProposedJunk);
+
     CONST volatile AWG_IOCTL_PEER *UnsafeIoctlPeer =
         (CONST volatile AWG_IOCTL_PEER *)((UCHAR *)UnsafeIoctlInterface + sizeof(AWG_IOCTL_INTERFACE));
     for (ULONG i = 0; i < IoctlInterface.PeersCount; ++i)
@@ -475,6 +552,7 @@ cleanupLock:
     RtlSecureZeroMemory(&IoctlInterface, sizeof(IoctlInterface));
     return Status;
 }
+#pragma warning(pop)
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
 static VOID

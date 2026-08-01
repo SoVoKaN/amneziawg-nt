@@ -83,6 +83,7 @@
     <ClInclude Include="crypto.h" />
     <ClInclude Include="device.h" />
     <ClInclude Include="ioctl.h" />
+    <ClInclude Include="junk.h" />
     <ClInclude Include="logging.h" />
     <ClInclude Include="memory.h" />
     <ClInclude Include="messages.h" />

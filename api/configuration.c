@@ -36,11 +36,29 @@ static_assert(
     RTL_FIELD_SIZE(AWG_IOCTL_INTERFACE, PublicKey) == RTL_FIELD_SIZE(AMNEZIAWG_INTERFACE, PublicKey),
     "Interface->PublicKey struct mismatch");
 static_assert(
+    offsetof(AWG_IOCTL_INTERFACE, JunkCount) == offsetof(AMNEZIAWG_INTERFACE, JunkCount),
+    "Interface->JunkCount mismatch");
+static_assert(
+    RTL_FIELD_SIZE(AWG_IOCTL_INTERFACE, JunkCount) == RTL_FIELD_SIZE(AMNEZIAWG_INTERFACE, JunkCount),
+    "Interface->JunkCount struct mismatch");
+static_assert(
     offsetof(AWG_IOCTL_INTERFACE, PeersCount) == offsetof(AMNEZIAWG_INTERFACE, PeersCount),
     "Interface->PeersCount struct mismatch");
 static_assert(
     RTL_FIELD_SIZE(AWG_IOCTL_INTERFACE, PeersCount) == RTL_FIELD_SIZE(AMNEZIAWG_INTERFACE, PeersCount),
     "Interface->PeersCount struct mismatch");
+static_assert(
+    offsetof(AWG_IOCTL_INTERFACE, JunkMinSize) == offsetof(AMNEZIAWG_INTERFACE, JunkMinSize),
+    "Interface->JunkMinSize struct mismatch");
+static_assert(
+    RTL_FIELD_SIZE(AWG_IOCTL_INTERFACE, JunkMinSize) == RTL_FIELD_SIZE(AMNEZIAWG_INTERFACE, JunkMinSize),
+    "Interface->JunkMinSize struct mismatch");
+static_assert(
+    offsetof(AWG_IOCTL_INTERFACE, JunkMaxSize) == offsetof(AMNEZIAWG_INTERFACE, JunkMaxSize),
+    "Interface->JunkMaxSize struct mismatch");
+static_assert(
+    RTL_FIELD_SIZE(AWG_IOCTL_INTERFACE, JunkMaxSize) == RTL_FIELD_SIZE(AMNEZIAWG_INTERFACE, JunkMaxSize),
+    "Interface->JunkMaxSize struct mismatch");
 static_assert(
     (DWORD)AWG_IOCTL_INTERFACE_HAS_PUBLIC_KEY == (DWORD)AMNEZIAWG_INTERFACE_HAS_PUBLIC_KEY,
     "INTERFACE_HAS_PUBLIC_KEY flag mismatch");
@@ -53,6 +71,15 @@ static_assert(
 static_assert(
     (DWORD)AWG_IOCTL_INTERFACE_REPLACE_PEERS == (DWORD)AMNEZIAWG_INTERFACE_REPLACE_PEERS,
     "INTERFACE_REPLACE_PEERS flag mismatch");
+static_assert(
+    (DWORD)AWG_IOCTL_INTERFACE_HAS_JUNK_COUNT == (DWORD)AMNEZIAWG_INTERFACE_HAS_JUNK_COUNT,
+    "INTERFACE_HAS_JUNK_COUNT flag mismatch");
+static_assert(
+    (DWORD)AWG_IOCTL_INTERFACE_HAS_JUNK_MIN_SIZE == (DWORD)AMNEZIAWG_INTERFACE_HAS_JUNK_MIN_SIZE,
+    "INTERFACE_HAS_JUNK_MIN_SIZE flag mismatch");
+static_assert(
+    (DWORD)AWG_IOCTL_INTERFACE_HAS_JUNK_MAX_SIZE == (DWORD)AMNEZIAWG_INTERFACE_HAS_JUNK_MAX_SIZE,
+    "INTERFACE_HAS_JUNK_MAX_SIZE flag mismatch");
 static_assert(sizeof(AWG_IOCTL_PEER) == sizeof(AMNEZIAWG_PEER), "Peer struct mismatch");
 static_assert(offsetof(AWG_IOCTL_PEER, Flags) == offsetof(AMNEZIAWG_PEER, Flags), "Peer->Flags struct mismatch");
 static_assert(
