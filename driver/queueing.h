@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #pragma once
@@ -12,8 +13,8 @@
 #define MAX_QUEUED_PACKETS 1024
 #define PEER_XMIT_PACKETS_PER_ROUND 256
 
-typedef struct _WG_DEVICE WG_DEVICE;
-typedef struct _WG_PEER WG_PEER;
+typedef struct _AWG_DEVICE AWG_DEVICE;
+typedef struct _AWG_PEER AWG_PEER;
 typedef struct _PREV_QUEUE PREV_QUEUE;
 
 /* queueing.c APIs: */
@@ -118,12 +119,13 @@ PeerSerialDequeue(_Inout_ PEER_SERIAL *Serial)
 #define NET_BUFFER_LIST_CRYPT_STATE(Nbl) ((LONG *)&NET_BUFFER_LIST_MINIPORT_RESERVED(Nbl)[0])
 #define NET_BUFFER_LIST_PER_PEER_LIST_LINK(Nbl) (*(NET_BUFFER_LIST **)&NET_BUFFER_LIST_MINIPORT_RESERVED(Nbl)[1])
 #define NET_BUFFER_LIST_PROTOCOL(Nbl) ((UINT16_BE)(ULONG_PTR)NET_BUFFER_LIST_INFO(Nbl, NetBufferListProtocolId))
-#define NET_BUFFER_LIST_DATAGRAM_INDICATION(Nbl) (*(WSK_DATAGRAM_INDICATION **)&NET_BUFFER_MINIPORT_RESERVED(NET_BUFFER_LIST_FIRST_NB(Nbl))[3])
+#define NET_BUFFER_LIST_DATAGRAM_INDICATION(Nbl) \
+    (*(WSK_DATAGRAM_INDICATION **)&NET_BUFFER_MINIPORT_RESERVED(NET_BUFFER_LIST_FIRST_NB(Nbl))[3])
 
 /* receive.c APIs: */
 _IRQL_requires_max_(DISPATCH_LEVEL)
 VOID
-PacketReceive(_Inout_ WG_DEVICE *Wg, _In_ __drv_aliasesMem NET_BUFFER_LIST *First);
+PacketReceive(_Inout_ AWG_DEVICE *Wg, _In_ __drv_aliasesMem NET_BUFFER_LIST *First);
 
 MINIPORT_RETURN_NET_BUFFER_LISTS ReturnNetBufferLists;
 
@@ -137,40 +139,43 @@ FreeReceiveNetBufferList(_In_opt_ NET_BUFFER_LIST *First)
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 VOID
-FreeIncomingHandshakes(_Inout_ WG_DEVICE *Wg);
+FreeIncomingHandshakes(_Inout_ AWG_DEVICE *Wg);
 
 /* send.c APIs: */
 _IRQL_requires_max_(DISPATCH_LEVEL)
 VOID
-PacketSendQueuedHandshakeInitiation(_Inout_ WG_PEER *Peer, _In_ BOOLEAN IsRetry);
+PacketSendQueuedHandshakeInitiation(_Inout_ AWG_PEER *Peer, _In_ BOOLEAN IsRetry);
 
 _IRQL_requires_max_(APC_LEVEL)
 _Requires_lock_not_held_(Peer->Handshake.StaticIdentity->Lock)
 _Requires_lock_not_held_(Peer->Handshake.Lock)
 VOID
-PacketSendHandshakeResponse(_Inout_ WG_PEER *Peer);
+PacketSendHandshakeResponse(_Inout_ AWG_PEER *Peer);
 
 _IRQL_requires_max_(APC_LEVEL)
 VOID
-PacketSendHandshakeCookie(_Inout_ WG_DEVICE *Wg, _In_ CONST NET_BUFFER_LIST *InitiatingNbl, _In_ UINT32_LE SenderIndex);
+PacketSendHandshakeCookie(
+    _Inout_ AWG_DEVICE *Wg,
+    _In_ CONST NET_BUFFER_LIST *InitiatingNbl,
+    _In_ UINT32_LE SenderIndex);
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 VOID
-PacketSendKeepalive(_Inout_ WG_PEER *Peer);
+PacketSendKeepalive(_Inout_ AWG_PEER *Peer);
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 _Requires_lock_not_held_(Peer->StagedPacketQueue.Lock)
 VOID
-PacketPurgeStagedPackets(_Inout_ WG_PEER *Peer);
+PacketPurgeStagedPackets(_Inout_ AWG_PEER *Peer);
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 _Requires_lock_not_held_(Peer->StagedPacketQueue.Lock)
 VOID
-PacketSendStagedPackets(_Inout_ WG_PEER *Peer);
+PacketSendStagedPackets(_Inout_ AWG_PEER *Peer);
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 VOID
-FreeSendNetBufferList(_In_ WG_DEVICE *Wg, __drv_freesMem(Mem) _In_ NET_BUFFER_LIST *Nbl, _In_ ULONG SendCompleteFlags);
+FreeSendNetBufferList(_In_ AWG_DEVICE *Wg, __drv_freesMem(Mem) _In_ NET_BUFFER_LIST *Nbl, _In_ ULONG SendCompleteFlags);
 
 MULTICORE_WORKQUEUE_ROUTINE PacketEncryptWorker, PacketDecryptWorker;
 MULTICORE_WORKQUEUE_ROUTINE PacketHandshakeTxWorker, PacketHandshakeRxWorker;
@@ -294,7 +299,7 @@ QueueEnqueuePerPeer(
     /* We take a reference, because as soon as we call WriteRelease, the
      * peer can be freed from below us.
      */
-    WG_PEER *Peer = PeerGet(NET_BUFFER_LIST_PEER(Nbl));
+    AWG_PEER *Peer = PeerGet(NET_BUFFER_LIST_PEER(Nbl));
     WriteRelease(NET_BUFFER_LIST_CRYPT_STATE(Nbl), State);
     PeerSerialEnqueueIfNotBusy(PeerQueue, PeerSerialEntry, TRUE);
     PeerPut(Peer);

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #include "interlocked.h"
@@ -20,7 +21,7 @@
 #define NDIS_MINIPORT_VERSION_MIN ((NDIS_MINIPORT_MINIMUM_MAJOR_VERSION << 16) | NDIS_MINIPORT_MINIMUM_MINOR_VERSION)
 #define NDIS_MINIPORT_VERSION_MAX ((NDIS_MINIPORT_MAJOR_VERSION << 16) | NDIS_MINIPORT_MINOR_VERSION)
 
-#define VENDOR_NAME "WireGuard Tunnel"
+#define VENDOR_NAME "AmneziaWG Tunnel"
 #define VENDOR_ID 0xFFFFFF00
 #define LINK_SPEED 100000000000ULL /* 100gbps */
 #define BUFFER_SPACE 0x4000000     /* 64MiB */
@@ -32,9 +33,9 @@ MINIPORT_UNLOAD Unload;
 
 _Use_decl_annotations_
 VOID
-DeviceStart(WG_DEVICE *Wg)
+DeviceStart(AWG_DEVICE *Wg)
 {
-    WG_PEER *Peer;
+    AWG_PEER *Peer;
 
     LIST_FOR_EACH_ENTRY (Peer, &Wg->PeerList, PeerList)
     {
@@ -49,7 +50,7 @@ _Use_decl_annotations_
 static NDIS_STATUS
 Restart(NDIS_HANDLE MiniportAdapterContext, PNDIS_MINIPORT_RESTART_PARAMETERS MiniportRestartParameters)
 {
-    WG_DEVICE *Wg = (WG_DEVICE *)MiniportAdapterContext;
+    AWG_DEVICE *Wg = (AWG_DEVICE *)MiniportAdapterContext;
 
     MuAcquirePushLockExclusive(&Wg->DeviceUpdateLock);
     ExReInitializeRundownProtection(&Wg->ItemsInFlight);
@@ -61,9 +62,9 @@ Restart(NDIS_HANDLE MiniportAdapterContext, PNDIS_MINIPORT_RESTART_PARAMETERS Mi
 
 _Use_decl_annotations_
 VOID
-DeviceStop(WG_DEVICE *Wg)
+DeviceStop(AWG_DEVICE *Wg)
 {
-    WG_PEER *Peer;
+    AWG_PEER *Peer;
 
     LIST_FOR_EACH_ENTRY (Peer, &Wg->PeerList, PeerList)
     {
@@ -81,7 +82,7 @@ _Use_decl_annotations_
 static NDIS_STATUS
 Pause(NDIS_HANDLE MiniportAdapterContext, PNDIS_MINIPORT_PAUSE_PARAMETERS MiniportPauseParameters)
 {
-    WG_DEVICE *Wg = (WG_DEVICE *)MiniportAdapterContext;
+    AWG_DEVICE *Wg = (AWG_DEVICE *)MiniportAdapterContext;
 
     MuAcquirePushLockExclusive(&Wg->DeviceUpdateLock);
     ExWaitForRundownProtectionRelease(&Wg->ItemsInFlight);
@@ -124,7 +125,7 @@ SendNetBufferLists(
     NDIS_PORT_NUMBER PortNumber,
     ULONG SendFlags)
 {
-    WG_DEVICE *Wg = (WG_DEVICE *)MiniportAdapterContext;
+    AWG_DEVICE *Wg = (AWG_DEVICE *)MiniportAdapterContext;
     ULONG CompleteFlags = 0;
     if (SendFlags & NDIS_SEND_FLAGS_DISPATCH_LEVEL)
         CompleteFlags |= NDIS_SEND_COMPLETE_FLAGS_DISPATCH_LEVEL;
@@ -195,7 +196,7 @@ SendNetBufferLists(
             goto cleanupNbl;
         }
 
-        WG_PEER *Peer = AllowedIpsLookupDst(&Wg->PeerAllowedIps, Protocol, Header);
+        AWG_PEER *Peer = AllowedIpsLookupDst(&Wg->PeerAllowedIps, Protocol, Header);
         if (!Peer)
         {
             NET_BUFFER_LIST_STATUS(Nbl) = NDIS_STATUS_FAILURE;
@@ -253,7 +254,7 @@ _Use_decl_annotations_
 static VOID
 HaltEx(NDIS_HANDLE MiniportAdapterContext, NDIS_HALT_ACTION HaltAction)
 {
-    WG_DEVICE *Wg = (WG_DEVICE *)MiniportAdapterContext;
+    AWG_DEVICE *Wg = (AWG_DEVICE *)MiniportAdapterContext;
     NsiDeactivate(Wg);
     MuAcquirePushLockExclusive(&Wg->DeviceUpdateLock);
     Wg->IncomingPort = 0;
@@ -285,7 +286,7 @@ HaltEx(NDIS_HANDLE MiniportAdapterContext, NDIS_HALT_ACTION HaltAction)
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
 static NDIS_STATUS
-RegisterAdapter(_In_ NDIS_HANDLE MiniportAdapterHandle, _In_ __drv_aliasesMem WG_DEVICE *Wg)
+RegisterAdapter(_In_ NDIS_HANDLE MiniportAdapterHandle, _In_ __drv_aliasesMem AWG_DEVICE *Wg)
 {
     NDIS_MINIPORT_ADAPTER_REGISTRATION_ATTRIBUTES AdapterRegistrationAttributes = {
         .Header = { .Type = NDIS_OBJECT_TYPE_MINIPORT_ADAPTER_REGISTRATION_ATTRIBUTES,
@@ -300,14 +301,12 @@ RegisterAdapter(_In_ NDIS_HANDLE MiniportAdapterHandle, _In_ __drv_aliasesMem WG
     if (!NT_SUCCESS(Status))
         return Status;
 
-    NDIS_PM_CAPABILITIES PmCapabilities = {
-        .Header = { .Type = NDIS_OBJECT_TYPE_DEFAULT,
-                    .Revision = NDIS_PM_CAPABILITIES_REVISION_2,
-                    .Size = NDIS_SIZEOF_NDIS_PM_CAPABILITIES_REVISION_2 },
-        .MinMagicPacketWakeUp = NdisDeviceStateUnspecified,
-        .MinPatternWakeUp = NdisDeviceStateUnspecified,
-        .MinLinkChangeWakeUp = NdisDeviceStateUnspecified
-    };
+    NDIS_PM_CAPABILITIES PmCapabilities = { .Header = { .Type = NDIS_OBJECT_TYPE_DEFAULT,
+                                                        .Revision = NDIS_PM_CAPABILITIES_REVISION_2,
+                                                        .Size = NDIS_SIZEOF_NDIS_PM_CAPABILITIES_REVISION_2 },
+                                            .MinMagicPacketWakeUp = NdisDeviceStateUnspecified,
+                                            .MinPatternWakeUp = NdisDeviceStateUnspecified,
+                                            .MinLinkChangeWakeUp = NdisDeviceStateUnspecified };
     static NDIS_OID SupportedOids[] = { OID_GEN_MAXIMUM_TOTAL_SIZE,
                                         OID_GEN_CURRENT_LOOKAHEAD,
                                         OID_GEN_TRANSMIT_BUFFER_SPACE,
@@ -416,7 +415,7 @@ InitializeEx(
     PNDIS_MINIPORT_INIT_PARAMETERS MiniportInitParameters)
 {
     NTSTATUS Status;
-    WG_DEVICE *Wg = MemAllocateAndZero(sizeof(*Wg));
+    AWG_DEVICE *Wg = MemAllocateAndZero(sizeof(*Wg));
     if (!Wg)
         return NDIS_STATUS_RESOURCES;
     Wg->MiniportAdapterHandle = MiniportAdapterHandle;
@@ -613,7 +612,7 @@ OidQueryWriteBuf(_Inout_ NDIS_OID_REQUEST *OidRequest, _In_reads_bytes_(Size) CO
 _IRQL_requires_max_(APC_LEVEL)
 _Must_inspect_result_
 static NDIS_STATUS
-OidQuery(_Inout_ WG_DEVICE *Wg, _Inout_ NDIS_OID_REQUEST *OidRequest)
+OidQuery(_Inout_ AWG_DEVICE *Wg, _Inout_ NDIS_OID_REQUEST *OidRequest)
 {
     NT_ASSERT(
         OidRequest->RequestType == NdisRequestQueryInformation ||
@@ -639,7 +638,7 @@ OidQuery(_Inout_ WG_DEVICE *Wg, _Inout_ NDIS_OID_REQUEST *OidRequest)
         return OidQueryWriteBuf(OidRequest, VENDOR_NAME, sizeof(VENDOR_NAME));
 
     case OID_GEN_VENDOR_DRIVER_VERSION:
-        return OidQueryWrite(OidRequest, (WIREGUARD_VERSION_MAJ << 16) | WIREGUARD_VERSION_MIN);
+        return OidQueryWrite(OidRequest, (AMNEZIAWG_VERSION_MAJ << 16) | AMNEZIAWG_VERSION_MIN);
 
     case OID_GEN_XMIT_OK:
         return OidQueryWrite32or64(
@@ -676,7 +675,7 @@ OidQuery(_Inout_ WG_DEVICE *Wg, _Inout_ NDIS_OID_REQUEST *OidRequest)
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
 static NDIS_STATUS
-OidSet(_Inout_ WG_DEVICE *Wg, _Inout_ NDIS_OID_REQUEST *OidRequest)
+OidSet(_Inout_ AWG_DEVICE *Wg, _Inout_ NDIS_OID_REQUEST *OidRequest)
 {
     NT_ASSERT(OidRequest->RequestType == NdisRequestSetInformation);
 
@@ -812,8 +811,8 @@ DeviceDriverEntry(DRIVER_OBJECT *DriverObject, UNICODE_STRING *RegistryPath)
         .MajorNdisVersion = (UCHAR)((NdisVersion & 0x00ff0000) >> 16),
         .MinorNdisVersion = (UCHAR)(NdisVersion & 0x000000ff),
 
-        .MajorDriverVersion = WIREGUARD_VERSION_MAJ,
-        .MinorDriverVersion = WIREGUARD_VERSION_MIN,
+        .MajorDriverVersion = AMNEZIAWG_VERSION_MAJ,
+        .MinorDriverVersion = AMNEZIAWG_VERSION_MIN,
 
         .InitializeHandlerEx = InitializeEx,
         .HaltHandlerEx = HaltEx,
@@ -839,7 +838,8 @@ DeviceDriverEntry(DRIVER_OBJECT *DriverObject, UNICODE_STRING *RegistryPath)
     return STATUS_SUCCESS;
 }
 
-VOID DeviceUnload(VOID)
+VOID
+DeviceUnload(VOID)
 {
     NdisMDeregisterMiniportDriver(NdisMiniportDriverHandle);
     RcuBarrier();

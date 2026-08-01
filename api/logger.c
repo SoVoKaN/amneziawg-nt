@@ -14,14 +14,15 @@
 #include <stdlib.h>
 
 static BOOL CALLBACK
-NopLogger(_In_ WIREGUARD_LOGGER_LEVEL Level, _In_ DWORD64 Timestamp, _In_z_ LPCWSTR LogLine)
+NopLogger(_In_ AMNEZIAWG_LOGGER_LEVEL Level, _In_ DWORD64 Timestamp, _In_z_ LPCWSTR LogLine)
 {
     return TRUE;
 }
 
-WIREGUARD_LOGGER_CALLBACK Logger = NopLogger;
+AMNEZIAWG_LOGGER_CALLBACK Logger = NopLogger;
 
-static DWORD64 Now(VOID)
+static DWORD64
+Now(VOID)
 {
     LARGE_INTEGER Timestamp;
     NtQuerySystemTime(&Timestamp);
@@ -30,7 +31,7 @@ static DWORD64 Now(VOID)
 
 _Use_decl_annotations_
 VOID WINAPI
-WireGuardSetLogger(WIREGUARD_LOGGER_CALLBACK NewLogger)
+AmneziaWGSetLogger(AMNEZIAWG_LOGGER_CALLBACK NewLogger)
 {
     if (!NewLogger)
         NewLogger = NopLogger;
@@ -46,7 +47,7 @@ StrTruncate(_Inout_count_(StrChars) LPWSTR Str, _In_ SIZE_T StrChars)
 
 _Use_decl_annotations_
 DWORD
-LoggerLog(WIREGUARD_LOGGER_LEVEL Level, LPCWSTR LogLine)
+LoggerLog(AMNEZIAWG_LOGGER_LEVEL Level, LPCWSTR LogLine)
 {
     DWORD LastError = GetLastError();
     Logger(Level, Now(), LogLine);
@@ -56,7 +57,7 @@ LoggerLog(WIREGUARD_LOGGER_LEVEL Level, LPCWSTR LogLine)
 
 _Use_decl_annotations_
 DWORD
-LoggerLogV(WIREGUARD_LOGGER_LEVEL Level, LPCWSTR Format, va_list Args)
+LoggerLogV(AMNEZIAWG_LOGGER_LEVEL Level, LPCWSTR Format, va_list Args)
 {
     DWORD LastError = GetLastError();
     WCHAR LogLine[0x400];
@@ -90,7 +91,7 @@ LoggerError(DWORD Error, LPCWSTR Prefix)
         0,
         (va_list *)(DWORD_PTR[]){ (DWORD_PTR)Prefix, (DWORD_PTR)Error, (DWORD_PTR)SystemMessage });
     if (FormattedMessage)
-        Logger(WIREGUARD_LOG_ERR, Now(), FormattedMessage);
+        Logger(AMNEZIAWG_LOG_ERR, Now(), FormattedMessage);
     LocalFree(FormattedMessage);
     LocalFree(SystemMessage);
     return Error;
@@ -137,24 +138,24 @@ out:
 static DWORD WINAPI
 LogReaderThread(_In_ LPVOID Parameter)
 {
-    WIREGUARD_ADAPTER *Adapter = Parameter;
+    AMNEZIAWG_ADAPTER *Adapter = Parameter;
     HANDLE ControlFile = AdapterOpenDeviceObject(Adapter);
     if (ControlFile == INVALID_HANDLE_VALUE)
     {
         LOG_LAST_ERROR(L"Unable to enable logging");
-        WriteULongNoFence(&Adapter->LogState, WIREGUARD_ADAPTER_LOG_OFF);
+        WriteULongNoFence(&Adapter->LogState, AMNEZIAWG_ADAPTER_LOG_OFF);
         return 0;
     }
-    while (ReadULongNoFence(&Adapter->LogState) != WIREGUARD_ADAPTER_LOG_OFF)
+    while (ReadULongNoFence(&Adapter->LogState) != AMNEZIAWG_ADAPTER_LOG_OFF)
     {
-        WG_IOCTL_LOG_ENTRY Entry = { 0 };
+        AWG_IOCTL_LOG_ENTRY Entry = { 0 };
         WCHAR WideLine[sizeof(Entry.Msg) + 32] = { 0 };
         DWORD Bytes = sizeof(Entry);
-        if (!DeviceIoControl(ControlFile, WG_IOCTL_READ_LOG_LINE, NULL, 0, &Entry, Bytes, &Bytes, NULL))
+        if (!DeviceIoControl(ControlFile, AWG_IOCTL_READ_LOG_LINE, NULL, 0, &Entry, Bytes, &Bytes, NULL))
         {
             BOOL IsAbort = GetLastError() == ERROR_OPERATION_ABORTED;
             CloseHandle(ControlFile);
-            if (ReadULongNoFence(&Adapter->LogState) == WIREGUARD_ADAPTER_LOG_OFF)
+            if (ReadULongNoFence(&Adapter->LogState) == AMNEZIAWG_ADAPTER_LOG_OFF)
                 return 0;
             if (IsAbort)
                 Sleep(5000);
@@ -163,13 +164,13 @@ LogReaderThread(_In_ LPVOID Parameter)
                 ControlFile = AdapterOpenDeviceObject(Adapter);
                 if (ControlFile == INVALID_HANDLE_VALUE)
                 {
-                    if (i < 10 && ReadULongNoFence(&Adapter->LogState) != WIREGUARD_ADAPTER_LOG_OFF)
+                    if (i < 10 && ReadULongNoFence(&Adapter->LogState) != AMNEZIAWG_ADAPTER_LOG_OFF)
                     {
                         Sleep(1000);
                         continue;
                     }
                     LOG_LAST_ERROR(L"Failed to reopen handle for logging after adapter disappeared");
-                    WriteULongNoFence(&Adapter->LogState, WIREGUARD_ADAPTER_LOG_OFF);
+                    WriteULongNoFence(&Adapter->LogState, AMNEZIAWG_ADAPTER_LOG_OFF);
                     return 0;
                 }
                 else
@@ -177,22 +178,22 @@ LogReaderThread(_In_ LPVOID Parameter)
             }
             continue;
         }
-        WIREGUARD_LOGGER_LEVEL Level;
+        AMNEZIAWG_LOGGER_LEVEL Level;
         if (Entry.Msg[0] == '1')
-            Level = WIREGUARD_LOG_ERR;
+            Level = AMNEZIAWG_LOG_ERR;
         else if (Entry.Msg[0] == '2')
-            Level = WIREGUARD_LOG_WARN;
+            Level = AMNEZIAWG_LOG_WARN;
         else if (Entry.Msg[0] == '3')
-            Level = WIREGUARD_LOG_INFO;
+            Level = AMNEZIAWG_LOG_INFO;
         else
             continue;
         DWORD Offset = 0;
-        if (ReadULongNoFence(&Adapter->LogState) == WIREGUARD_ADAPTER_LOG_ON_WITH_PREFIX)
+        if (ReadULongNoFence(&Adapter->LogState) == AMNEZIAWG_ADAPTER_LOG_ON_WITH_PREFIX)
         {
             if (!Adapter->IfIndex)
             {
                 NET_LUID Luid;
-                WireGuardGetAdapterLUID(Adapter, &Luid);
+                AmneziaWGGetAdapterLUID(Adapter, &Luid);
                 ConvertInterfaceLuidToIndex(&Luid, &Adapter->IfIndex);
             }
             Offset = swprintf_s(WideLine, _countof(WideLine), L"%u: ", Adapter->IfIndex);
@@ -207,13 +208,13 @@ LogReaderThread(_In_ LPVOID Parameter)
 
 _Use_decl_annotations_
 BOOL WINAPI
-WireGuardSetAdapterLogging(WIREGUARD_ADAPTER *Adapter, WIREGUARD_ADAPTER_LOG_STATE LogState)
+AmneziaWGSetAdapterLogging(AMNEZIAWG_ADAPTER *Adapter, AMNEZIAWG_ADAPTER_LOG_STATE LogState)
 {
     DWORD CurrentState = ReadULongNoFence(&Adapter->LogState);
     if (CurrentState == (DWORD)LogState)
         return TRUE;
     WriteULongNoFence(&Adapter->LogState, LogState);
-    if (CurrentState != WIREGUARD_ADAPTER_LOG_OFF && LogState == WIREGUARD_ADAPTER_LOG_OFF && Adapter->LogThread)
+    if (CurrentState != AMNEZIAWG_ADAPTER_LOG_OFF && LogState == AMNEZIAWG_ADAPTER_LOG_OFF && Adapter->LogThread)
     {
         CancelSynchronousIo(Adapter->LogThread);
         while (WaitForSingleObject(Adapter->LogThread, 100) == WAIT_TIMEOUT)
@@ -222,7 +223,7 @@ WireGuardSetAdapterLogging(WIREGUARD_ADAPTER *Adapter, WIREGUARD_ADAPTER_LOG_STA
         Adapter->LogThread = NULL;
         return TRUE;
     }
-    if (CurrentState == WIREGUARD_ADAPTER_LOG_OFF && LogState != WIREGUARD_ADAPTER_LOG_OFF && !Adapter->LogThread)
+    if (CurrentState == AMNEZIAWG_ADAPTER_LOG_OFF && LogState != AMNEZIAWG_ADAPTER_LOG_OFF && !Adapter->LogThread)
     {
         Adapter->LogThread = CreateThread(NULL, 0, LogReaderThread, Adapter, 0, NULL);
         return Adapter->LogThread != NULL;

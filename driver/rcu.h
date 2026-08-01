@@ -48,7 +48,8 @@ _IRQL_requires_max_(DISPATCH_LEVEL)
 _IRQL_saves_
 _IRQL_raises_(DISPATCH_LEVEL)
 _Acquires_rcu_
-static inline KIRQL RcuReadLock(VOID)
+static inline KIRQL
+RcuReadLock(VOID)
 {
     _Analysis_assume_rcu_acquired_;
     return KeRaiseIrqlToDpcLevel();
@@ -65,7 +66,8 @@ RcuReadUnlock(_In_ _Notliteral_ _IRQL_restores_ KIRQL Irql)
 
 _IRQL_requires_min_(DISPATCH_LEVEL)
 _Acquires_rcu_
-static inline VOID RcuReadLockAtDpcLevel(VOID)
+static inline VOID
+RcuReadLockAtDpcLevel(VOID)
 {
     _Analysis_assume_rcu_acquired_;
 }

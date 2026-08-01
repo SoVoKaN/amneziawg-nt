@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "wireguard.h"
+#include "amneziawg.h"
 #include <Windows.h>
 
 /**

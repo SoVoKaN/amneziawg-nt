@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #pragma once
@@ -11,12 +12,12 @@
 #include <wdm.h>
 #include <wsk.h>
 
-typedef struct _WG_PEER WG_PEER;
+typedef struct _AWG_PEER AWG_PEER;
 
 typedef struct _ALLOWEDIPS_NODE ALLOWEDIPS_NODE;
 struct _ALLOWEDIPS_NODE
 {
-    WG_PEER __rcu *Peer;
+    AWG_PEER __rcu *Peer;
     ALLOWEDIPS_NODE __rcu *Bit[2];
     UINT8 Cidr, BitAtA, BitAtB, Bitlen;
     DECLSPEC_ALIGN(8) UINT8 Bits[16];
@@ -49,7 +50,7 @@ AllowedIpsInsertV4(
     _Inout_ ALLOWEDIPS_TABLE *Table,
     _In_ CONST IN_ADDR *Ip,
     _In_ UINT8 Cidr,
-    _In_ WG_PEER *Peer,
+    _In_ AWG_PEER *Peer,
     _In_ EX_PUSH_LOCK *Lock);
 
 _Requires_lock_held_(Lock)
@@ -58,7 +59,7 @@ AllowedIpsInsertV6(
     _Inout_ ALLOWEDIPS_TABLE *Table,
     _In_ CONST IN6_ADDR *Ip,
     _In_ UINT8 Cidr,
-    _In_ WG_PEER *Peer,
+    _In_ AWG_PEER *Peer,
     _In_ EX_PUSH_LOCK *Lock);
 
 _Requires_lock_held_(Lock)
@@ -67,7 +68,7 @@ AllowedIpsRemoveV4(
     _Inout_ ALLOWEDIPS_TABLE *Table,
     _In_ CONST IN_ADDR *Ip,
     _In_ UINT8 Cidr,
-    _In_ WG_PEER *Peer,
+    _In_ AWG_PEER *Peer,
     _In_ EX_PUSH_LOCK *Lock);
 
 _Requires_lock_held_(Lock)
@@ -76,12 +77,12 @@ AllowedIpsRemoveV6(
     _Inout_ ALLOWEDIPS_TABLE *Table,
     _In_ CONST IN6_ADDR *Ip,
     _In_ UINT8 Cidr,
-    _In_ WG_PEER *Peer,
+    _In_ AWG_PEER *Peer,
     _In_ EX_PUSH_LOCK *Lock);
 
 _Requires_lock_held_(Lock)
 VOID
-AllowedIpsRemoveByPeer(_Inout_ ALLOWEDIPS_TABLE *Table, _In_ WG_PEER *Peer, _In_ EX_PUSH_LOCK *Lock);
+AllowedIpsRemoveByPeer(_Inout_ ALLOWEDIPS_TABLE *Table, _In_ AWG_PEER *Peer, _In_ EX_PUSH_LOCK *Lock);
 
 /* The Ip pointer should be 8 byte aligned */
 ADDRESS_FAMILY
@@ -90,12 +91,12 @@ AllowedIpsReadNode(_In_ CONST ALLOWEDIPS_NODE *Node, _Out_ UINT8 Ip[16], _Out_ U
 /* These return a strong reference to a peer: */
 _Must_inspect_result_
 _Post_maybenull_
-WG_PEER *
+AWG_PEER *
 AllowedIpsLookupDst(_In_ ALLOWEDIPS_TABLE *Table, _In_ UINT16_BE Proto, _In_ CONST VOID *IpHdr);
 
 _Must_inspect_result_
 _Post_maybenull_
-WG_PEER *
+AWG_PEER *
 AllowedIpsLookupSrc(_In_ ALLOWEDIPS_TABLE *Table, _In_ UINT16_BE Proto, _In_ CONST VOID *IpHdr);
 
 #ifdef DBG

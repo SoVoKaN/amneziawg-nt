@@ -1,14 +1,15 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #pragma once
 
 #include "messages.h"
 
-typedef struct _WG_PEER WG_PEER;
-typedef struct _WG_DEVICE WG_DEVICE;
+typedef struct _AWG_PEER AWG_PEER;
+typedef struct _AWG_DEVICE AWG_DEVICE;
 
 typedef struct _COOKIE_CHECKER
 {
@@ -17,7 +18,7 @@ typedef struct _COOKIE_CHECKER
     UINT8 MessageMac1Key[NOISE_SYMMETRIC_KEY_LEN];
     UINT64 SecretBirthdate;
     EX_PUSH_LOCK SecretLock;
-    WG_DEVICE *Device;
+    AWG_DEVICE *Device;
 } COOKIE_CHECKER;
 
 typedef struct _COOKIE
@@ -42,14 +43,14 @@ typedef enum _COOKIE_MAC_STATE
 
 _IRQL_requires_max_(APC_LEVEL)
 VOID
-CookieCheckerInit(_Out_ COOKIE_CHECKER *Checker, _In_ WG_DEVICE *Wg);
+CookieCheckerInit(_Out_ COOKIE_CHECKER *Checker, _In_ AWG_DEVICE *Wg);
 
 _Requires_lock_held_(Checker->Device->DeviceUpdateLock)
 VOID
 CookieCheckerPrecomputeDeviceKeys(_Inout_ COOKIE_CHECKER *Checker);
 
 VOID
-CookieCheckerPrecomputePeerKeys(_Inout_ WG_PEER *Peer);
+CookieCheckerPrecomputePeerKeys(_Inout_ AWG_PEER *Peer);
 
 _IRQL_requires_max_(APC_LEVEL)
 VOID
@@ -61,7 +62,7 @@ CookieValidatePacket(_Inout_ COOKIE_CHECKER *Checker, _In_ NET_BUFFER_LIST *Nbl,
 
 _IRQL_requires_max_(APC_LEVEL)
 VOID
-CookieAddMacToPacket(_Inout_updates_bytes_(Len) VOID *Message, _In_ SIZE_T Len, _Inout_ WG_PEER *Peer);
+CookieAddMacToPacket(_Inout_updates_bytes_(Len) VOID *Message, _In_ SIZE_T Len, _Inout_ AWG_PEER *Peer);
 
 _IRQL_requires_max_(APC_LEVEL)
 VOID
@@ -73,4 +74,4 @@ CookieMessageCreate(
 
 _IRQL_requires_max_(APC_LEVEL)
 VOID
-CookieMessageConsume(_In_ MESSAGE_HANDSHAKE_COOKIE *Src, _Inout_ WG_DEVICE *Wg);
+CookieMessageConsume(_In_ MESSAGE_HANDSHAKE_COOKIE *Src, _Inout_ AWG_DEVICE *Wg);

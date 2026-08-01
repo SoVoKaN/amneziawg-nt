@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #pragma once
@@ -65,7 +66,7 @@ typedef struct _PEER_SERIAL
     KSPIN_LOCK Lock;
 } PEER_SERIAL;
 
-typedef struct _WG_DEVICE
+typedef struct _AWG_DEVICE
 {
     NDIS_HANDLE MiniportAdapterHandle; /* This is actually a pointer to NDIS_MINIPORT_BLOCK struct. */
     NDIS_STATISTICS_INFO Statistics;
@@ -92,16 +93,16 @@ typedef struct _WG_DEVICE
     ULONG HandshakeRxQueueLen;
     LOG_RING Log;
     LIST_ENTRY DeviceList;
-} WG_DEVICE;
+} AWG_DEVICE;
 
 _Requires_lock_held_(Wg->DeviceUpdateLock)
 VOID
-DeviceStart(_Inout_ WG_DEVICE *Wg);
+DeviceStart(_Inout_ AWG_DEVICE *Wg);
 
 _IRQL_requires_max_(APC_LEVEL)
 _Requires_lock_held_(Wg->DeviceUpdateLock)
 VOID
-DeviceStop(_Inout_ WG_DEVICE *Wg);
+DeviceStop(_Inout_ AWG_DEVICE *Wg);
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 VOID

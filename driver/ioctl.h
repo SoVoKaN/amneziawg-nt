@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #pragma once
@@ -17,14 +18,14 @@
 #    include <devioctl.h>
 #endif
 
-#define WG_KEY_LEN 32
+#define AWG_KEY_LEN 32
 
 typedef enum
 {
-    WG_IOCTL_ALLOWED_IP_REMOVE = 1 << 0
-} WG_IOCTL_ALLOWED_IP_FLAG;
+    AWG_IOCTL_ALLOWED_IP_REMOVE = 1 << 0
+} AWG_IOCTL_ALLOWED_IP_FLAG;
 
-typedef DECLSPEC_ALIGN(8) struct _WG_IOCTL_ALLOWED_IP
+typedef DECLSPEC_ALIGN(8) struct _AWG_IOCTL_ALLOWED_IP
 {
     union
     {
@@ -33,90 +34,90 @@ typedef DECLSPEC_ALIGN(8) struct _WG_IOCTL_ALLOWED_IP
     } Address;
     ADDRESS_FAMILY AddressFamily;
     UCHAR Cidr;
-    WG_IOCTL_ALLOWED_IP_FLAG Flags;
-} WG_IOCTL_ALLOWED_IP;
+    AWG_IOCTL_ALLOWED_IP_FLAG Flags;
+} AWG_IOCTL_ALLOWED_IP;
 
 typedef enum
 {
-    WG_IOCTL_PEER_HAS_PUBLIC_KEY = 1 << 0,
-    WG_IOCTL_PEER_HAS_PRESHARED_KEY = 1 << 1,
-    WG_IOCTL_PEER_HAS_PERSISTENT_KEEPALIVE = 1 << 2,
-    WG_IOCTL_PEER_HAS_ENDPOINT = 1 << 3,
-    WG_IOCTL_PEER_HAS_PROTOCOL_VERSION = 1 << 4,
-    WG_IOCTL_PEER_REPLACE_ALLOWED_IPS = 1 << 5,
-    WG_IOCTL_PEER_REMOVE = 1 << 6,
-    WG_IOCTL_PEER_UPDATE_ONLY = 1 << 7
-} WG_IOCTL_PEER_FLAG;
+    AWG_IOCTL_PEER_HAS_PUBLIC_KEY = 1 << 0,
+    AWG_IOCTL_PEER_HAS_PRESHARED_KEY = 1 << 1,
+    AWG_IOCTL_PEER_HAS_PERSISTENT_KEEPALIVE = 1 << 2,
+    AWG_IOCTL_PEER_HAS_ENDPOINT = 1 << 3,
+    AWG_IOCTL_PEER_HAS_PROTOCOL_VERSION = 1 << 4,
+    AWG_IOCTL_PEER_REPLACE_ALLOWED_IPS = 1 << 5,
+    AWG_IOCTL_PEER_REMOVE = 1 << 6,
+    AWG_IOCTL_PEER_UPDATE_ONLY = 1 << 7
+} AWG_IOCTL_PEER_FLAG;
 
-typedef DECLSPEC_ALIGN(8) struct _WG_IOCTL_PEER
+typedef DECLSPEC_ALIGN(8) struct _AWG_IOCTL_PEER
 {
-    WG_IOCTL_PEER_FLAG Flags;
+    AWG_IOCTL_PEER_FLAG Flags;
     ULONG ProtocolVersion; /* 0 = latest protocol, 1 = this protocol. */
-    UCHAR PublicKey[WG_KEY_LEN];
-    UCHAR PresharedKey[WG_KEY_LEN];
+    UCHAR PublicKey[AWG_KEY_LEN];
+    UCHAR PresharedKey[AWG_KEY_LEN];
     USHORT PersistentKeepalive;
     SOCKADDR_INET Endpoint;
     ULONG64 TxBytes;
     ULONG64 RxBytes;
     ULONG64 LastHandshake;
     ULONG AllowedIPsCount;
-} WG_IOCTL_PEER;
+} AWG_IOCTL_PEER;
 
 typedef enum
 {
-    WG_IOCTL_INTERFACE_HAS_PUBLIC_KEY = 1 << 0,
-    WG_IOCTL_INTERFACE_HAS_PRIVATE_KEY = 1 << 1,
-    WG_IOCTL_INTERFACE_HAS_LISTEN_PORT = 1 << 2,
-    WG_IOCTL_INTERFACE_REPLACE_PEERS = 1 << 3
-} WG_IOCTL_INTERFACE_FLAG;
+    AWG_IOCTL_INTERFACE_HAS_PUBLIC_KEY = 1 << 0,
+    AWG_IOCTL_INTERFACE_HAS_PRIVATE_KEY = 1 << 1,
+    AWG_IOCTL_INTERFACE_HAS_LISTEN_PORT = 1 << 2,
+    AWG_IOCTL_INTERFACE_REPLACE_PEERS = 1 << 3
+} AWG_IOCTL_INTERFACE_FLAG;
 
-typedef DECLSPEC_ALIGN(8) struct _WG_IOCTL_INTERFACE
+typedef DECLSPEC_ALIGN(8) struct _AWG_IOCTL_INTERFACE
 {
-    WG_IOCTL_INTERFACE_FLAG Flags;
+    AWG_IOCTL_INTERFACE_FLAG Flags;
     USHORT ListenPort;
-    UCHAR PrivateKey[WG_KEY_LEN];
-    UCHAR PublicKey[WG_KEY_LEN];
+    UCHAR PrivateKey[AWG_KEY_LEN];
+    UCHAR PublicKey[AWG_KEY_LEN];
     ULONG PeersCount;
-} WG_IOCTL_INTERFACE;
+} AWG_IOCTL_INTERFACE;
 
 typedef enum
 {
-    WG_IOCTL_ADAPTER_STATE_DOWN = 0,
-    WG_IOCTL_ADAPTER_STATE_UP = 1,
-    WG_IOCTL_ADAPTER_STATE_QUERY = 2
-} WG_IOCTL_ADAPTER_STATE;
+    AWG_IOCTL_ADAPTER_STATE_DOWN = 0,
+    AWG_IOCTL_ADAPTER_STATE_UP = 1,
+    AWG_IOCTL_ADAPTER_STATE_QUERY = 2
+} AWG_IOCTL_ADAPTER_STATE;
 
-typedef DECLSPEC_ALIGN(8) struct _WG_IOCTL_LOG_ENTRY
+typedef DECLSPEC_ALIGN(8) struct _AWG_IOCTL_LOG_ENTRY
 {
     ULONG64 Timestamp;
     CHAR Msg[120];
-} WG_IOCTL_LOG_ENTRY;
+} AWG_IOCTL_LOG_ENTRY;
 
 /* Get adapter properties.
  *
  * The lpOutBuffer and nOutBufferSize parameters of DeviceIoControl() must describe an user allocated buffer
- * and its size in bytes. The buffer will be filled with a WG_IOCTL_INTERFACE struct followed by zero or more
- * WG_IOCTL_PEER structs. Should all data not fit into the buffer, ERROR_MORE_DATA is returned with the required
+ * and its size in bytes. The buffer will be filled with a AWG_IOCTL_INTERFACE struct followed by zero or more
+ * AWG_IOCTL_PEER structs. Should all data not fit into the buffer, ERROR_MORE_DATA is returned with the required
  * size of the buffer.
  */
-#define WG_IOCTL_GET CTL_CODE(45208U, 321, METHOD_OUT_DIRECT, FILE_READ_DATA | FILE_WRITE_DATA)
+#define AWG_IOCTL_GET CTL_CODE(45208U, 321, METHOD_OUT_DIRECT, FILE_READ_DATA | FILE_WRITE_DATA)
 
 /* Set adapter properties.
  *
- * The lpInBuffer and nInBufferSize parameters of DeviceIoControl() must describe a WG_IOCTL_INTERFACE struct followed
- * by PeersCount times WG_IOCTL_PEER struct.
+ * The lpInBuffer and nInBufferSize parameters of DeviceIoControl() must describe a AWG_IOCTL_INTERFACE struct followed
+ * by PeersCount times AWG_IOCTL_PEER struct.
  */
-#define WG_IOCTL_SET CTL_CODE(45208U, 322, METHOD_IN_DIRECT, FILE_READ_DATA | FILE_WRITE_DATA)
+#define AWG_IOCTL_SET CTL_CODE(45208U, 322, METHOD_IN_DIRECT, FILE_READ_DATA | FILE_WRITE_DATA)
 
 /* Bring adapter up, down, or query existing adapter state. Input is verb. Output is current state after operation. */
-#define WG_IOCTL_SET_ADAPTER_STATE CTL_CODE(45208U, 323, METHOD_BUFFERED, FILE_READ_DATA | FILE_WRITE_DATA)
+#define AWG_IOCTL_SET_ADAPTER_STATE CTL_CODE(45208U, 323, METHOD_BUFFERED, FILE_READ_DATA | FILE_WRITE_DATA)
 
 /* Read the next line in the adapter log. */
-#define WG_IOCTL_READ_LOG_LINE CTL_CODE(45208U, 324, METHOD_BUFFERED, FILE_READ_DATA | FILE_WRITE_DATA)
+#define AWG_IOCTL_READ_LOG_LINE CTL_CODE(45208U, 324, METHOD_BUFFERED, FILE_READ_DATA | FILE_WRITE_DATA)
 
 #ifdef _KERNEL_MODE
 
-typedef struct _WG_DEVICE WG_DEVICE;
+typedef struct _AWG_DEVICE AWG_DEVICE;
 
 _IRQL_requires_max_(APC_LEVEL)
 VOID

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #pragma once
@@ -9,7 +10,7 @@
 #include "messages.h"
 #include "crypto.h"
 
-typedef struct _WG_PEER WG_PEER;
+typedef struct _AWG_PEER AWG_PEER;
 
 typedef struct _PUBKEY_HASHTABLE
 {
@@ -28,18 +29,18 @@ PUBKEY_HASHTABLE *PubkeyHashtableAlloc(VOID);
 _IRQL_requires_max_(APC_LEVEL)
 _Requires_lock_not_held_(Table->Lock)
 VOID
-PubkeyHashtableAdd(_Inout_ PUBKEY_HASHTABLE *Table, _Inout_ WG_PEER *Peer);
+PubkeyHashtableAdd(_Inout_ PUBKEY_HASHTABLE *Table, _Inout_ AWG_PEER *Peer);
 
 _IRQL_requires_max_(APC_LEVEL)
 _Requires_lock_not_held_(Table->Lock)
 VOID
-PubkeyHashtableRemove(_Inout_ PUBKEY_HASHTABLE *Table, _Inout_ WG_PEER *Peer);
+PubkeyHashtableRemove(_Inout_ PUBKEY_HASHTABLE *Table, _Inout_ AWG_PEER *Peer);
 
 /* Returns a strong reference to a peer */
 _IRQL_requires_max_(DISPATCH_LEVEL)
 _Must_inspect_result_
 _Post_maybenull_
-WG_PEER *
+AWG_PEER *
 PubkeyHashtableLookup(_In_ PUBKEY_HASHTABLE *Table, _In_ CONST UINT8 Pubkey[NOISE_PUBLIC_KEY_LEN]);
 
 typedef struct _INDEX_HASHTABLE
@@ -56,7 +57,7 @@ typedef enum _INDEX_HASHTABLE_TYPE
 
 typedef struct _INDEX_HASHTABLE_ENTRY
 {
-    WG_PEER *Peer;
+    AWG_PEER *Peer;
     HLIST_NODE IndexHash;
     INDEX_HASHTABLE_TYPE Type;
     UINT32_LE Index;
@@ -93,4 +94,4 @@ IndexHashtableLookup(
     _In_ INDEX_HASHTABLE *Table,
     _In_ CONST INDEX_HASHTABLE_TYPE TypeMask,
     _In_ CONST UINT32_LE Index,
-    _Out_ WG_PEER **Peer);
+    _Out_ AWG_PEER **Peer);

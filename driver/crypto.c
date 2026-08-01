@@ -7,9 +7,9 @@
 #include "arithmetic.h"
 #include "memory.h"
 
-#pragma warning(disable : 4244)  /* '=': conversion from 'UINT32' to 'UINT8', possible loss of data */
-#pragma warning(disable : 4267)  /* '=': conversion from 'SIZE_T' to 'ULONG', possible loss of data */
-#pragma warning(disable : 4242)  /* '=': conversion from 'SIZE_T' to 'UINT32', possible loss of data */
+#pragma warning(disable : 4244) /* '=': conversion from 'UINT32' to 'UINT8', possible loss of data */
+#pragma warning(disable : 4267) /* '=': conversion from 'SIZE_T' to 'ULONG', possible loss of data */
+#pragma warning(disable : 4242) /* '=': conversion from 'SIZE_T' to 'UINT32', possible loss of data */
 
 #ifdef ALLOC_PRAGMA
 #    pragma alloc_text(INIT, CryptoDriverEntry)
@@ -55,7 +55,8 @@ static CONST CPUID_BIT_INFO CpuidBitInfo[] = {
     { 7, WORD_EBX, CPUID_70_EBX_AVX512VL_BIT, CPU_FEATURE_AVX512VL },
 };
 
-VOID CryptoDriverEntry(VOID)
+VOID
+CryptoDriverEntry(VOID)
 {
     CPU_FEATURE DisabledCpuFeatures =
         ~(CPU_FEATURE_SSSE3 | CPU_FEATURE_AVX | CPU_FEATURE_AVX2 | CPU_FEATURE_AVX512F | CPU_FEATURE_AVX512VL |
@@ -145,7 +146,10 @@ SimdPut(SIMD_STATE *State)
     RtlSecureZeroMemory(State, sizeof(*State));
 }
 #else
-VOID CryptoDriverEntry(VOID) {}
+VOID
+CryptoDriverEntry(VOID)
+{
+}
 #endif
 
 static inline UINT32
@@ -2851,7 +2855,8 @@ Curve25519(
 #        pragma alloc_text(INIT, CryptoSelftest)
 #    endif
 _Use_decl_annotations_
-BOOLEAN CryptoSelftest(VOID)
+BOOLEAN
+CryptoSelftest(VOID)
 {
     BOOLEAN Success = TRUE;
     SIMD_STATE Simd;

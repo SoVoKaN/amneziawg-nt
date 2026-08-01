@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #pragma once
@@ -43,9 +44,9 @@ typedef enum _HANDSHAKE_TX_ACTION
     HANDSHAKE_TX_SEND
 } HANDSHAKE_TX_ACTION;
 
-typedef struct _WG_PEER
+typedef struct _AWG_PEER
 {
-    WG_DEVICE *Device;
+    AWG_DEVICE *Device;
     PREV_QUEUE TxQueue, RxQueue;
     PEER_SERIAL_ENTRY TxSerialEntry, RxSerialEntry, HandshakeTxSerialEntry;
     NET_BUFFER_LIST_QUEUE StagedPacketQueue;
@@ -72,43 +73,43 @@ typedef struct _WG_PEER
     LIST_ENTRY PeerList;
     LIST_ENTRY AllowedIpsList;
     UINT64 InternalId;
-} WG_PEER;
+} AWG_PEER;
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 _Requires_lock_held_(Wg->DeviceUpdateLock)
 _Must_inspect_result_
 NTSTATUS
 PeerCreate(
-    _In_ WG_DEVICE *Wg,
+    _In_ AWG_DEVICE *Wg,
     _In_ CONST UINT8 PublicKey[NOISE_PUBLIC_KEY_LEN],
     _In_ CONST UINT8 PresharedKey[NOISE_SYMMETRIC_KEY_LEN],
-    _Out_ WG_PEER **Peer);
+    _Out_ AWG_PEER **Peer);
 
 _Must_inspect_result_
 _Post_maybenull_
-WG_PEER *
-PeerGetMaybeZero(_In_opt_ WG_PEER *Peer);
+AWG_PEER *
+PeerGetMaybeZero(_In_opt_ AWG_PEER *Peer);
 
 _Post_notnull_
-static inline WG_PEER *
-PeerGet(_In_ WG_PEER *Peer)
+static inline AWG_PEER *
+PeerGet(_In_ AWG_PEER *Peer)
 {
     KrefGet(&Peer->Refcount);
     return Peer;
 }
 
 VOID
-PeerPut(_In_opt_ WG_PEER *Peer);
+PeerPut(_In_opt_ AWG_PEER *Peer);
 
 _IRQL_requires_max_(APC_LEVEL)
 _Requires_lock_held_(Peer->Device->DeviceUpdateLock)
 VOID
-PeerRemove(_In_opt_ WG_PEER *Peer);
+PeerRemove(_In_opt_ AWG_PEER *Peer);
 
 _IRQL_requires_max_(APC_LEVEL)
 _Requires_lock_held_(Wg->DeviceUpdateLock)
 VOID
-PeerRemoveAll(_Inout_ WG_DEVICE *Wg);
+PeerRemoveAll(_Inout_ AWG_DEVICE *Wg);
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 NTSTATUS

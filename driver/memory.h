@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #pragma once
@@ -10,7 +11,7 @@
 #include <wdm.h>
 #include <ndis.h>
 
-#define MEMORY_TAG Be32ToCpu('wgnt')
+#define MEMORY_TAG Be32ToCpu('awgt')
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 _Post_maybenull_
@@ -107,17 +108,12 @@ _IRQL_requires_max_(DISPATCH_LEVEL)
 _Return_type_success_(return != NULL)
 __drv_allocatesMem(mem)
 NET_BUFFER_LIST *
-MemAllocateNetBufferList(
-    _In_ ULONG SpaceBefore,
-    _In_ ULONG Size,
-    _In_ ULONG SpaceAfter);
+MemAllocateNetBufferList(_In_ ULONG SpaceBefore, _In_ ULONG Size, _In_ ULONG SpaceAfter);
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 __drv_allocatesMem(mem)
 NET_BUFFER_LIST *
-MemAllocateNetBufferListWithClonedGeometry(
-    _In_ NET_BUFFER_LIST *Original,
-    _In_ ULONG AdditionalBytesPerNb);
+MemAllocateNetBufferListWithClonedGeometry(_In_ NET_BUFFER_LIST *Original, _In_ ULONG AdditionalBytesPerNb);
 
 BOOLEAN
 MemNetBufferListIsOurs(_In_ NET_BUFFER_LIST *Nbl);

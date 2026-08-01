@@ -5,11 +5,11 @@
 
 #pragma once
 
-#include "wireguard.h"
+#include "amneziawg.h"
 #include <Windows.h>
 #include <SetupAPI.h>
 
-#define WIREGUARD_HWID L"WireGuard"
+#define AMNEZIAWG_HWID L"AmneziaWG"
 
 typedef struct _SP_DEVINFO_DATA_LIST SP_DEVINFO_DATA_LIST;
 
@@ -24,11 +24,11 @@ DriverInstall(
     _Out_ SP_DEVINFO_DATA_LIST **ExistingAdaptersForCleanup);
 
 /**
- * @copydoc WIREGUARD_DELETE_DRIVER_FUNC
+ * @copydoc AMNEZIAWG_DELETE_DRIVER_FUNC
  */
-WIREGUARD_DELETE_DRIVER_FUNC WireGuardDeleteDriver;
+AMNEZIAWG_DELETE_DRIVER_FUNC AmneziaWGDeleteDriver;
 
 /**
- * @copydoc WIREGUARD_GET_RUNNING_DRIVER_VERSION_FUNC
+ * @copydoc AMNEZIAWG_GET_RUNNING_DRIVER_VERSION_FUNC
  */
-WIREGUARD_GET_RUNNING_DRIVER_VERSION_FUNC WireGuardGetRunningDriverVersion;
+AMNEZIAWG_GET_RUNNING_DRIVER_VERSION_FUNC AmneziaWGGetRunningDriverVersion;

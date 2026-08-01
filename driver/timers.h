@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #pragma once
@@ -15,47 +16,47 @@ typedef struct _TIMER
     BOOLEAN Pending;
 } TIMER;
 
-typedef struct _WG_PEER WG_PEER;
+typedef struct _AWG_PEER AWG_PEER;
 
 _IRQL_requires_max_(APC_LEVEL)
 VOID
-TimersDataSent(_Inout_ WG_PEER *Peer);
+TimersDataSent(_Inout_ AWG_PEER *Peer);
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 VOID
-TimersDataReceived(_Inout_ WG_PEER *Peer);
+TimersDataReceived(_Inout_ AWG_PEER *Peer);
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 VOID
-TimersAnyAuthenticatedPacketSent(_Inout_ WG_PEER *Peer);
+TimersAnyAuthenticatedPacketSent(_Inout_ AWG_PEER *Peer);
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 VOID
-TimersAnyAuthenticatedPacketReceived(_Inout_ WG_PEER *Peer);
+TimersAnyAuthenticatedPacketReceived(_Inout_ AWG_PEER *Peer);
 
 _IRQL_requires_max_(APC_LEVEL)
 VOID
-TimersHandshakeInitiated(_Inout_ WG_PEER *Peer);
+TimersHandshakeInitiated(_Inout_ AWG_PEER *Peer);
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 VOID
-TimersHandshakeComplete(_Inout_ WG_PEER *Peer);
+TimersHandshakeComplete(_Inout_ AWG_PEER *Peer);
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 VOID
-TimersSessionDerived(_Inout_ WG_PEER *Peer);
+TimersSessionDerived(_Inout_ AWG_PEER *Peer);
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 VOID
-TimersAnyAuthenticatedPacketTraversal(_Inout_ WG_PEER *Peer);
+TimersAnyAuthenticatedPacketTraversal(_Inout_ AWG_PEER *Peer);
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 VOID
-TimersInit(_Inout_ WG_PEER *Peer);
+TimersInit(_Inout_ AWG_PEER *Peer);
 
 _IRQL_requires_max_(APC_LEVEL)
 VOID
-TimersStop(_Inout_ WG_PEER *Peer);
+TimersStop(_Inout_ AWG_PEER *Peer);
 
 static inline BOOLEAN
 BirthdateHasExpired(_In_ CONST UINT64 BirthdaySysTimeUnits, _In_ CONST UINT64 ExpirationSeconds)

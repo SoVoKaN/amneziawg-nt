@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #include "cookie.h"
@@ -17,7 +18,7 @@
 
 _Use_decl_annotations_
 VOID
-CookieCheckerInit(COOKIE_CHECKER *Checker, WG_DEVICE *Wg)
+CookieCheckerInit(COOKIE_CHECKER *Checker, AWG_DEVICE *Wg)
 {
     MuInitializePushLock(&Checker->SecretLock);
     Checker->SecretBirthdate = KeQueryInterruptTime();
@@ -64,7 +65,7 @@ CookieCheckerPrecomputeDeviceKeys(COOKIE_CHECKER *Checker)
 
 _Use_decl_annotations_
 VOID
-CookieCheckerPrecomputePeerKeys(WG_PEER *Peer)
+CookieCheckerPrecomputePeerKeys(AWG_PEER *Peer)
 {
     PrecomputeKey(Peer->LatestCookie.CookieDecryptionKey, Peer->Handshake.RemoteStatic, CookieKeyLabel);
     PrecomputeKey(Peer->LatestCookie.MessageMac1Key, Peer->Handshake.RemoteStatic, Mac1KeyLabel);
@@ -177,7 +178,7 @@ out:
 
 _Use_decl_annotations_
 VOID
-CookieAddMacToPacket(VOID *Message, SIZE_T Len, WG_PEER *Peer)
+CookieAddMacToPacket(VOID *Message, SIZE_T Len, AWG_PEER *Peer)
 {
     MESSAGE_MACS *Macs = (MESSAGE_MACS *)((UINT8 *)Message + Len - sizeof(*Macs));
 
@@ -216,9 +217,9 @@ CookieMessageCreate(MESSAGE_HANDSHAKE_COOKIE *Dst, CONST NET_BUFFER_LIST *Nbl, U
 
 _Use_decl_annotations_
 VOID
-CookieMessageConsume(MESSAGE_HANDSHAKE_COOKIE *Src, WG_DEVICE *Wg)
+CookieMessageConsume(MESSAGE_HANDSHAKE_COOKIE *Src, AWG_DEVICE *Wg)
 {
-    WG_PEER *Peer = NULL;
+    AWG_PEER *Peer = NULL;
     UINT8 Cookie[COOKIE_LEN];
     BOOLEAN Ret;
 

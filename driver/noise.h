@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #pragma once
@@ -92,7 +93,7 @@ typedef struct _NOISE_HANDSHAKE
     EX_PUSH_LOCK Lock;
 } NOISE_HANDSHAKE;
 
-typedef struct _WG_DEVICE WG_DEVICE;
+typedef struct _AWG_DEVICE AWG_DEVICE;
 
 VOID NoiseDriverEntry(VOID);
 
@@ -104,7 +105,7 @@ NoiseHandshakeInit(
     _In_ NOISE_STATIC_IDENTITY *StaticIdentity,
     _In_ CONST UINT8 PeerPublicKey[NOISE_PUBLIC_KEY_LEN],
     _In_ CONST UINT8 PeerPresharedKey[NOISE_SYMMETRIC_KEY_LEN],
-    _In_ WG_PEER *Peer);
+    _In_ AWG_PEER *Peer);
 
 _IRQL_requires_max_(APC_LEVEL)
 _Requires_lock_not_held_(Handshake->Lock)
@@ -139,7 +140,7 @@ NoiseReceivedWithKeypair(_Inout_ NOISE_KEYPAIRS *Keypairs, _In_ NOISE_KEYPAIR *R
 _IRQL_requires_max_(APC_LEVEL)
 _Requires_lock_not_held_(Peer->Keypairs.KeypairUpdateLock)
 VOID
-NoiseExpireCurrentPeerKeypairs(_Inout_ WG_PEER *Peer);
+NoiseExpireCurrentPeerKeypairs(_Inout_ AWG_PEER *Peer);
 
 _Requires_exclusive_lock_held_(StaticIdentity->Lock)
 VOID
@@ -156,7 +157,7 @@ _IRQL_requires_max_(APC_LEVEL)
 _Requires_lock_held_(Peer->Device->DeviceUpdateLock)
 _Requires_lock_not_held_(Peer->Handshake.Lock)
 VOID
-NoisePrecomputeStaticStatic(_Inout_ WG_PEER *Peer);
+NoisePrecomputeStaticStatic(_Inout_ AWG_PEER *Peer);
 
 _IRQL_requires_max_(APC_LEVEL)
 _Requires_lock_not_held_(Handshake->StaticIdentity->Lock)
@@ -170,8 +171,8 @@ _IRQL_requires_max_(APC_LEVEL)
 _Requires_lock_not_held_(Wg->StaticIdentity.Lock)
 _Must_inspect_result_
 _Return_type_success_(return != NULL)
-WG_PEER *
-NoiseHandshakeConsumeInitiation(_In_ CONST MESSAGE_HANDSHAKE_INITIATION *Src, _Inout_ WG_DEVICE *Wg);
+AWG_PEER *
+NoiseHandshakeConsumeInitiation(_In_ CONST MESSAGE_HANDSHAKE_INITIATION *Src, _Inout_ AWG_DEVICE *Wg);
 
 _IRQL_requires_max_(APC_LEVEL)
 _Requires_lock_not_held_(Handshake->StaticIdentity->Lock)
@@ -185,8 +186,8 @@ _IRQL_requires_max_(APC_LEVEL)
 _Requires_lock_not_held_(Wg->StaticIdentity.Lock)
 _Must_inspect_result_
 _Return_type_success_(return != NULL)
-WG_PEER *
-NoiseHandshakeConsumeResponse(_In_ CONST MESSAGE_HANDSHAKE_RESPONSE *Src, _Inout_ WG_DEVICE *Wg);
+AWG_PEER *
+NoiseHandshakeConsumeResponse(_In_ CONST MESSAGE_HANDSHAKE_RESPONSE *Src, _Inout_ AWG_DEVICE *Wg);
 
 _IRQL_requires_max_(APC_LEVEL)
 _Requires_lock_not_held_(Handshake->Lock)

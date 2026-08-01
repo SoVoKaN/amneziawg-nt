@@ -35,7 +35,7 @@ ResourceGetAddress(LPCWSTR ResourceName, DWORD *Size)
     BYTE *Address = LockResource(LoadedResource);
     if (!Address)
     {
-        LOG(WIREGUARD_LOG_ERR, L"Failed to lock resource %s", ResourceName);
+        LOG(AMNEZIAWG_LOG_ERR, L"Failed to lock resource %s", ResourceName);
         SetLastError(ERROR_LOCK_FAILED);
         return NULL;
     }
@@ -50,7 +50,7 @@ ResourceCopyToFile(LPCWSTR DestinationPath, LPCWSTR ResourceName)
     const VOID *LockedResource = ResourceGetAddress(ResourceName, &SizeResource);
     if (!LockedResource)
     {
-        LOG(WIREGUARD_LOG_ERR, L"Failed to locate resource %s", ResourceName);
+        LOG(AMNEZIAWG_LOG_ERR, L"Failed to locate resource %s", ResourceName);
         return FALSE;
     }
     HANDLE DestinationHandle = CreateFileW(
@@ -75,7 +75,7 @@ ResourceCopyToFile(LPCWSTR DestinationPath, LPCWSTR ResourceName)
     }
     if (BytesWritten != SizeResource)
     {
-        LOG(WIREGUARD_LOG_ERR,
+        LOG(AMNEZIAWG_LOG_ERR,
             L"Incomplete write to %s (written: %u, expected: %u)",
             DestinationPath,
             BytesWritten,
@@ -108,7 +108,7 @@ ResourceCreateTemporaryDirectory(_Out_writes_z_(MAX_PATH) LPWSTR RandomTempSubDi
     UCHAR RandomBytes[32] = { 0 };
     if (!RtlGenRandom(RandomBytes, sizeof(RandomBytes)))
     {
-        LOG(WIREGUARD_LOG_ERR, L"Failed to generate random");
+        LOG(AMNEZIAWG_LOG_ERR, L"Failed to generate random");
         SetLastError(ERROR_GEN_FAILURE);
         return FALSE;
     }

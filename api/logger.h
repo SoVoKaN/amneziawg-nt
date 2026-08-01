@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "wireguard.h"
+#include "amneziawg.h"
 #include "main.h"
 #include "registry.h"
 #include <Windows.h>
@@ -13,29 +13,29 @@
 #include <stdarg.h>
 #include <wchar.h>
 
-extern WIREGUARD_LOGGER_CALLBACK Logger;
+extern AMNEZIAWG_LOGGER_CALLBACK Logger;
 
 /**
- * @copydoc WIREGUARD_SET_LOGGER_FUNC
+ * @copydoc AMNEZIAWG_SET_LOGGER_FUNC
  */
-WIREGUARD_SET_LOGGER_FUNC WireGuardSetLogger;
+AMNEZIAWG_SET_LOGGER_FUNC AmneziaWGSetLogger;
 
 /**
- * @copydoc WIREGUARD_SET_ADAPTER_LOGGING_FUNC
+ * @copydoc AMNEZIAWG_SET_ADAPTER_LOGGING_FUNC
  */
-WIREGUARD_SET_ADAPTER_LOGGING_FUNC WireGuardSetAdapterLogging;
+AMNEZIAWG_SET_ADAPTER_LOGGING_FUNC AmneziaWGSetAdapterLogging;
 
 _Post_equals_last_error_
 DWORD
-LoggerLog(_In_ WIREGUARD_LOGGER_LEVEL Level, _In_z_ LPCWSTR LogLine);
+LoggerLog(_In_ AMNEZIAWG_LOGGER_LEVEL Level, _In_z_ LPCWSTR LogLine);
 
 _Post_equals_last_error_
 DWORD
-LoggerLogV(_In_ WIREGUARD_LOGGER_LEVEL Level, _In_z_ _Printf_format_string_ LPCWSTR Format, _In_ va_list Args);
+LoggerLogV(_In_ AMNEZIAWG_LOGGER_LEVEL Level, _In_z_ _Printf_format_string_ LPCWSTR Format, _In_ va_list Args);
 
 _Post_equals_last_error_
 static inline DWORD
-LoggerLogFmt(_In_ WIREGUARD_LOGGER_LEVEL Level, _In_z_ _Printf_format_string_ LPCWSTR Format, ...)
+LoggerLogFmt(_In_ AMNEZIAWG_LOGGER_LEVEL Level, _In_z_ _Printf_format_string_ LPCWSTR Format, ...)
 {
     va_list Args;
     va_start(Args, Format);
@@ -87,9 +87,9 @@ LoggerLastErrorFmt(_In_z_ _Printf_format_string_ LPCWSTR Format, ...)
 VOID
 LoggerGetRegistryKeyPath(_In_ HKEY Key, _Out_writes_z_(MAX_REG_PATH) LPWSTR Path);
 
-#define LOG(lvl, msg, ...) (LoggerLogFmt((lvl), msg __VA_OPT__(,) __VA_ARGS__))
-#define LOG_ERROR(err, msg, ...) (LoggerErrorFmt((err), msg __VA_OPT__(,) __VA_ARGS__))
-#define LOG_LAST_ERROR(msg, ...) (LoggerLastErrorFmt(msg __VA_OPT__(,) __VA_ARGS__))
+#define LOG(lvl, msg, ...) (LoggerLogFmt((lvl), msg __VA_OPT__(, ) __VA_ARGS__))
+#define LOG_ERROR(err, msg, ...) (LoggerErrorFmt((err), msg __VA_OPT__(, ) __VA_ARGS__))
+#define LOG_LAST_ERROR(msg, ...) (LoggerLastErrorFmt(msg __VA_OPT__(, ) __VA_ARGS__))
 
 #define RET_ERROR(Ret, Error) ((Error) == ERROR_SUCCESS ? (Ret) : (SetLastError(Error), 0))
 
@@ -104,7 +104,8 @@ LoggerAlloc(_In_z_ LPCWSTR Function, _In_ DWORD Flags, _In_ SIZE_T Size)
     VOID *Data = HeapAlloc(ModuleHeap, Flags, Size);
     if (!Data)
     {
-        LoggerLogFmt(WIREGUARD_LOG_ERR, L"%s: Out of memory (flags: 0x%x, requested size: 0x%zx)", Function, Flags, Size);
+        LoggerLogFmt(
+            AMNEZIAWG_LOG_ERR, L"%s: Out of memory (flags: 0x%x, requested size: 0x%zx)", Function, Flags, Size);
         SetLastError(ERROR_OUTOFMEMORY);
     }
     return Data;
@@ -120,7 +121,8 @@ LoggerReAlloc(_In_z_ LPCWSTR Function, _In_ DWORD Flags, _Frees_ptr_opt_ LPVOID 
     VOID *Data = Mem ? HeapReAlloc(ModuleHeap, Flags, Mem, Size) : HeapAlloc(ModuleHeap, Flags, Size);
     if (!Data)
     {
-        LoggerLogFmt(WIREGUARD_LOG_ERR, L"%s: Out of memory (flags: 0x%x, requested size: 0x%zx)", Function, Flags, Size);
+        LoggerLogFmt(
+            AMNEZIAWG_LOG_ERR, L"%s: Out of memory (flags: 0x%x, requested size: 0x%zx)", Function, Flags, Size);
         SetLastError(ERROR_OUTOFMEMORY);
     }
     return Data;

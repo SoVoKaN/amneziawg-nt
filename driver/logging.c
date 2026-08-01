@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2026 Mark Kraus <mark@sovokan.com>. All Rights Reserved.
  */
 
 #include "logging.h"
@@ -60,7 +61,7 @@ out:
 
 _Use_decl_annotations_
 NTSTATUS
-LogRingRead(LOG_RING *Log, WG_IOCTL_LOG_ENTRY *Entry, BOOLEAN *WhileFalse)
+LogRingRead(LOG_RING *Log, AWG_IOCTL_LOG_ENTRY *Entry, BOOLEAN *WhileFalse)
 {
     NTSTATUS Status;
 
@@ -113,7 +114,7 @@ LogRingIsRatelimited(_Inout_ LOG_RING *Log)
         if (Log->RatelimitMissed)
         {
             LogWarn(
-                CONTAINING_RECORD(Log, WG_DEVICE, Log),
+                CONTAINING_RECORD(Log, AWG_DEVICE, Log),
                 "%u log lines swallowed by rate limiting",
                 Log->RatelimitMissed);
             Log->RatelimitMissed = 0;

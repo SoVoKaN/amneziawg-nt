@@ -12,8 +12,8 @@
   <!--
     General Properties
   -->
-  <Import Project="wireguard-nt.props" />
-  <Import Project="wireguard-nt.props.user" Condition="exists('wireguard-nt.props.user')" />
+  <Import Project="amneziawg-nt.props" />
+  <Import Project="amneziawg-nt.props.user" Condition="exists('amneziawg-nt.props.user')" />
 
   <Target Name="Driver" DependsOnTargets="Driver-x86;Driver-amd64;Driver-arm64" />
   <Target Name="Dll"    DependsOnTargets="Dll-x86;Dll-amd64;Dll-arm64" />
@@ -26,42 +26,42 @@
   </Target>
 
   <Target Name="Driver-x86"
-    Outputs="$(Configuration)\x86\driver\wireguard.sys;$(Configuration)\x86\driver\wireguard.inf;$(Configuration)\x86\driver\wireguard.cat">
+    Outputs="$(Configuration)\x86\driver\amneziawg.sys;$(Configuration)\x86\driver\amneziawg.inf;$(Configuration)\x86\driver\amneziawg.cat">
     <MSBuild Projects="driver\driver.vcxproj" Targets="Build" Properties="Configuration=$(Configuration);Platform=Win32" />
   </Target>
   <Target Name="Driver-amd64"
-    Outputs="$(Configuration)\amd64\driver\wireguard.sys;$(Configuration)\amd64\driver\wireguard.inf;$(Configuration)\amd64\driver\wireguard.cat">
+    Outputs="$(Configuration)\amd64\driver\amneziawg.sys;$(Configuration)\amd64\driver\amneziawg.inf;$(Configuration)\amd64\driver\amneziawg.cat">
     <MSBuild Projects="driver\driver.vcxproj" Targets="Build" Properties="Configuration=$(Configuration);Platform=x64" />
   </Target>
   <Target Name="Driver-arm"
-    Outputs="$(Configuration)\arm\driver\wireguard.sys;$(Configuration)\arm\driver\wireguard.inf;$(Configuration)\arm\driver\wireguard.cat">
+    Outputs="$(Configuration)\arm\driver\amneziawg.sys;$(Configuration)\arm\driver\amneziawg.inf;$(Configuration)\arm\driver\amneziawg.cat">
     <MSBuild Projects="driver\driver.vcxproj" Targets="Build" Properties="Configuration=$(Configuration);Platform=ARM" />
   </Target>
   <Target Name="Driver-arm64"
-    Outputs="$(Configuration)\arm64\driver\wireguard.sys;$(Configuration)\arm64\driver\wireguard.inf;$(Configuration)\arm64\driver\wireguard.cat">
+    Outputs="$(Configuration)\arm64\driver\amneziawg.sys;$(Configuration)\arm64\driver\amneziawg.inf;$(Configuration)\arm64\driver\amneziawg.cat">
     <MSBuild Projects="driver\driver.vcxproj" Targets="Build" Properties="Configuration=$(Configuration);Platform=ARM64" />
   </Target>
 
   <!--
-    wireguard.dll Building
+    amneziawg.dll Building
   -->
   <Target Name="Dll-x86"
-    Outputs="$(Configuration)\x86\wireguard.dll"
+    Outputs="$(Configuration)\x86\amneziawg.dll"
     DependsOnTargets="Dll-amd64;Dll-arm64">
     <MSBuild Projects="setupapihost\setupapihost.vcxproj;api\api.vcxproj" Targets="Build" Properties="Configuration=$(Configuration);Platform=Win32" />
   </Target>
   <Target Name="Dll-amd64"
-    Outputs="$(Configuration)\amd64\wireguard.dll"
+    Outputs="$(Configuration)\amd64\amneziawg.dll"
     DependsOnTargets="Dll-arm64">
     <MSBuild Projects="setupapihost\setupapihost.vcxproj;api\api.vcxproj" Targets="Build" Properties="Configuration=$(Configuration);Platform=x64" />
   </Target>
   <Target Name="Dll-arm"
-    Outputs="$(Configuration)\arm\wireguard.dll"
+    Outputs="$(Configuration)\arm\amneziawg.dll"
     DependsOnTargets="Dll-arm64">
     <MSBuild Projects="setupapihost\setupapihost.vcxproj;api\api.vcxproj" Targets="Build" Properties="Configuration=$(Configuration);Platform=ARM" />
   </Target>
   <Target Name="Dll-arm64"
-    Outputs="$(Configuration)\arm64\wireguard.dll">
+    Outputs="$(Configuration)\arm64\amneziawg.dll">
     <MSBuild Projects="setupapihost\setupapihost.vcxproj;api\api.vcxproj" Targets="Build" Properties="Configuration=$(Configuration);Platform=ARM64" />
   </Target>
 
@@ -69,16 +69,16 @@
     Zip Building
   -->
   <PropertyGroup>
-    <ZipTargetPath>dist\wireguard-nt-$(WireGuardVersion).zip</ZipTargetPath>
+    <ZipTargetPath>dist\amneziawg-nt-$(AmneziaWGVersion).zip</ZipTargetPath>
     <ZipIntDir>dist\zip-intermediate\</ZipIntDir>
   </PropertyGroup>
   <ItemGroup>
-    <ZipFilesSrc Include="prebuilt-binaries-license.txt"        /><ZipFilesDst Include="$(ZipIntDir)wireguard-nt\LICENSE.txt"             />
-    <ZipFilesSrc Include="README.md"                            /><ZipFilesDst Include="$(ZipIntDir)wireguard-nt\README.md"               />
-    <ZipFilesSrc Include="api\wireguard.h"                      /><ZipFilesDst Include="$(ZipIntDir)wireguard-nt\include\wireguard.h"     />
-    <ZipFilesSrc Include="$(Configuration)\amd64\wireguard.dll" /><ZipFilesDst Include="$(ZipIntDir)wireguard-nt\bin\amd64\wireguard.dll" />
-    <ZipFilesSrc Include="$(Configuration)\arm64\wireguard.dll" /><ZipFilesDst Include="$(ZipIntDir)wireguard-nt\bin\arm64\wireguard.dll" />
-    <ZipFilesSrc Include="$(Configuration)\x86\wireguard.dll"   /><ZipFilesDst Include="$(ZipIntDir)wireguard-nt\bin\x86\wireguard.dll"   />
+    <ZipFilesSrc Include="prebuilt-binaries-license.txt"        /><ZipFilesDst Include="$(ZipIntDir)amneziawg-nt\LICENSE.txt"             />
+    <ZipFilesSrc Include="README.md"                            /><ZipFilesDst Include="$(ZipIntDir)amneziawg-nt\README.md"               />
+    <ZipFilesSrc Include="api\amneziawg.h"                      /><ZipFilesDst Include="$(ZipIntDir)amneziawg-nt\include\amneziawg.h"     />
+    <ZipFilesSrc Include="$(Configuration)\amd64\amneziawg.dll" /><ZipFilesDst Include="$(ZipIntDir)amneziawg-nt\bin\amd64\amneziawg.dll" />
+    <ZipFilesSrc Include="$(Configuration)\arm64\amneziawg.dll" /><ZipFilesDst Include="$(ZipIntDir)amneziawg-nt\bin\arm64\amneziawg.dll" />
+    <ZipFilesSrc Include="$(Configuration)\x86\amneziawg.dll"   /><ZipFilesDst Include="$(ZipIntDir)amneziawg-nt\bin\x86\amneziawg.dll"   />
   </ItemGroup>
   <Target Name="Zip"
     Inputs="@(ZipFilesSrc)"

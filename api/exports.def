@@ -1,14 +1,14 @@
-LIBRARY wireguard.dll
+LIBRARY amneziawg.dll
 EXPORTS
-	WireGuardCreateAdapter
-	WireGuardOpenAdapter
-	WireGuardCloseAdapter
-	WireGuardGetAdapterLUID
-	WireGuardGetAdapterState
-	WireGuardGetConfiguration
-	WireGuardGetRunningDriverVersion
-	WireGuardDeleteDriver
-	WireGuardSetAdapterLogging
-	WireGuardSetAdapterState
-	WireGuardSetConfiguration
-	WireGuardSetLogger
+	AmneziaWGCreateAdapter
+	AmneziaWGOpenAdapter
+	AmneziaWGCloseAdapter
+	AmneziaWGGetAdapterLUID
+	AmneziaWGGetAdapterState
+	AmneziaWGGetConfiguration
+	AmneziaWGGetRunningDriverVersion
+	AmneziaWGDeleteDriver
+	AmneziaWGSetAdapterLogging
+	AmneziaWGSetAdapterState
+	AmneziaWGSetConfiguration
+	AmneziaWGSetLogger

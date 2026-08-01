@@ -26,7 +26,8 @@ ProcessorTick(KDPC *Dpc, PVOID DeferredContext, PVOID SystemArgument1, PVOID Sys
 }
 
 _Use_decl_annotations_
-VOID RcuSynchronize(VOID)
+VOID
+RcuSynchronize(VOID)
 {
     MuAcquirePushLockExclusive(&SyncState.Lock);
     KEVENT Event;
@@ -112,7 +113,8 @@ __RcuCall(_Inout_ RCU_CALLBACK *Head)
 }
 
 _Use_decl_annotations_
-VOID RcuBarrier(VOID)
+VOID
+RcuBarrier(VOID)
 {
     RCU_CALLBACK Work;
     Work.Type = RCU_CALLBACK_SYNC;
@@ -158,7 +160,8 @@ cleanupDpcs:
 }
 
 _Use_decl_annotations_
-VOID RcuUnload(VOID)
+VOID
+RcuUnload(VOID)
 {
     RcuBarrier();
     WriteBooleanNoFence(&Cleanup.Terminate, TRUE);
