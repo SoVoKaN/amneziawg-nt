@@ -16,6 +16,10 @@
 #define AWG_IOCTL_INTERFACE_HAS_JUNK \
     (AWG_IOCTL_INTERFACE_HAS_JUNK_COUNT | AWG_IOCTL_INTERFACE_HAS_JUNK_MIN_SIZE | AWG_IOCTL_INTERFACE_HAS_JUNK_MAX_SIZE)
 
+#define AWG_IOCTL_INTERFACE_HAS_SIZES \
+    (AWG_IOCTL_INTERFACE_HAS_SIZE_HANDSHAKE_INITIATION | AWG_IOCTL_INTERFACE_HAS_SIZE_HANDSHAKE_RESPONSE | \
+     AWG_IOCTL_INTERFACE_HAS_SIZE_HANDSHAKE_COOKIE | AWG_IOCTL_INTERFACE_HAS_SIZE_DATA)
+
 #define SIZE_OF_EMBEDDED(A, B) \
     FIELD_OFFSET( \
         struct { \
@@ -97,28 +101,6 @@ WgDeviceFromFdo(_In_ DEVICE_OBJECT *DeviceObject)
     return NdisWdfGetAdapterContextFromAdapterHandle(DeviceObject->DeviceExtension);
 }
 
-static inline VOID
-GetJunkPackets(_In_ CONST AWG_DEVICE *Wg, _Inout_ AWG_IOCTL_INTERFACE *IoctlInterface)
-{
-    JUNK_PACKETS Junk = { .Raw = ReadULong64NoFence(&Wg->JunkPackets.Raw) };
-
-    if (Junk.Count != 0)
-    {
-        IoctlInterface->JunkCount = Junk.Count;
-        IoctlInterface->Flags |= AWG_IOCTL_INTERFACE_HAS_JUNK_COUNT;
-    }
-    if (Junk.Size.Min != 0)
-    {
-        IoctlInterface->JunkMinSize = Junk.Size.Min;
-        IoctlInterface->Flags |= AWG_IOCTL_INTERFACE_HAS_JUNK_MIN_SIZE;
-    }
-    if (Junk.Size.Max != 0)
-    {
-        IoctlInterface->JunkMaxSize = Junk.Size.Max;
-        IoctlInterface->Flags |= AWG_IOCTL_INTERFACE_HAS_JUNK_MAX_SIZE;
-    }
-}
-
 _IRQL_requires_max_(PASSIVE_LEVEL)
 static VOID
 Get(_In_ DEVICE_OBJECT *DeviceObject, _Inout_ IRP *Irp)
@@ -158,6 +140,43 @@ Get(_In_ DEVICE_OBJECT *DeviceObject, _Inout_ IRP *Irp)
             IoctlInterface->ListenPort = Wg->IncomingPort;
             IoctlInterface->Flags |= AWG_IOCTL_INTERFACE_HAS_LISTEN_PORT;
         }
+        JUNK_PACKETS Junk = { .Raw = ReadULong64NoFence(&Wg->JunkPackets.Raw) };
+        if (Junk.Count != 0)
+        {
+            IoctlInterface->JunkCount = Junk.Count;
+            IoctlInterface->Flags |= AWG_IOCTL_INTERFACE_HAS_JUNK_COUNT;
+        }
+        if (Junk.Size.Min != 0)
+        {
+            IoctlInterface->JunkMinSize = Junk.Size.Min;
+            IoctlInterface->Flags |= AWG_IOCTL_INTERFACE_HAS_JUNK_MIN_SIZE;
+        }
+        if (Junk.Size.Max != 0)
+        {
+            IoctlInterface->JunkMaxSize = Junk.Size.Max;
+            IoctlInterface->Flags |= AWG_IOCTL_INTERFACE_HAS_JUNK_MAX_SIZE;
+        }
+        MESSAGE_PREFIX_SIZES Sizes = { .Raw = ReadULong64NoFence(&Wg->PrefixSizes.Raw) };
+        if (Sizes.HandshakeInitiation > sizeof(MESSAGE_HANDSHAKE_INITIATION))
+        {
+            IoctlInterface->SizeHandshakeInitiation = Sizes.HandshakeInitiation - sizeof(MESSAGE_HANDSHAKE_INITIATION);
+            IoctlInterface->Flags |= AWG_IOCTL_INTERFACE_HAS_SIZE_HANDSHAKE_INITIATION;
+        }
+        if (Sizes.HandshakeResponse > sizeof(MESSAGE_HANDSHAKE_RESPONSE))
+        {
+            IoctlInterface->SizeHandshakeResponse = Sizes.HandshakeResponse - sizeof(MESSAGE_HANDSHAKE_RESPONSE);
+            IoctlInterface->Flags |= AWG_IOCTL_INTERFACE_HAS_SIZE_HANDSHAKE_RESPONSE;
+        }
+        if (Sizes.HandshakeCookie > sizeof(MESSAGE_HANDSHAKE_COOKIE))
+        {
+            IoctlInterface->SizeHandshakeCookie = Sizes.HandshakeCookie - sizeof(MESSAGE_HANDSHAKE_COOKIE);
+            IoctlInterface->Flags |= AWG_IOCTL_INTERFACE_HAS_SIZE_HANDSHAKE_COOKIE;
+        }
+        if (Sizes.Data != 0)
+        {
+            IoctlInterface->SizeData = Sizes.Data;
+            IoctlInterface->Flags |= AWG_IOCTL_INTERFACE_HAS_SIZE_DATA;
+        }
         MuAcquirePushLockShared(&Wg->StaticIdentity.Lock);
         if (Wg->StaticIdentity.HasIdentity)
         {
@@ -166,7 +185,6 @@ Get(_In_ DEVICE_OBJECT *DeviceObject, _Inout_ IRP *Irp)
             IoctlInterface->Flags |= AWG_IOCTL_INTERFACE_HAS_PUBLIC_KEY | AWG_IOCTL_INTERFACE_HAS_PRIVATE_KEY;
         }
         MuReleasePushLockShared(&Wg->StaticIdentity.Lock);
-        GetJunkPackets(Wg, IoctlInterface);
     }
 
     AWG_IOCTL_PEER *IoctlPeer = (AWG_IOCTL_PEER *)((UCHAR *)IoctlInterface + sizeof(AWG_IOCTL_INTERFACE));
@@ -249,6 +267,22 @@ MergeJunkPackets(_In_ CONST AWG_DEVICE *Wg, _In_ CONST AWG_IOCTL_INTERFACE *Ioct
     return Junk;
 }
 
+_Requires_lock_held_(Wg->DeviceUpdateLock)
+static inline MESSAGE_PREFIX_SIZES
+MergePrefixSizes(_In_ CONST AWG_DEVICE *Wg, _In_ CONST AWG_IOCTL_INTERFACE *IoctlInterface)
+{
+    MESSAGE_PREFIX_SIZES Sizes = { .Raw = Wg->PrefixSizes.Raw };
+    if (IoctlInterface->Flags & AWG_IOCTL_INTERFACE_HAS_SIZE_HANDSHAKE_INITIATION)
+        Sizes.HandshakeInitiation = IoctlInterface->SizeHandshakeInitiation + sizeof(MESSAGE_HANDSHAKE_INITIATION);
+    if (IoctlInterface->Flags & AWG_IOCTL_INTERFACE_HAS_SIZE_HANDSHAKE_RESPONSE)
+        Sizes.HandshakeResponse = IoctlInterface->SizeHandshakeResponse + sizeof(MESSAGE_HANDSHAKE_RESPONSE);
+    if (IoctlInterface->Flags & AWG_IOCTL_INTERFACE_HAS_SIZE_HANDSHAKE_COOKIE)
+        Sizes.HandshakeCookie = IoctlInterface->SizeHandshakeCookie + sizeof(MESSAGE_HANDSHAKE_COOKIE);
+    if (IoctlInterface->Flags & AWG_IOCTL_INTERFACE_HAS_SIZE_DATA)
+        Sizes.Data = IoctlInterface->SizeData;
+    return Sizes;
+}
+
 _Must_inspect_result_
 static inline NTSTATUS
 ValidateJunkPackets(_In_ CONST JUNK_PACKETS Junk)
@@ -260,11 +294,40 @@ ValidateJunkPackets(_In_ CONST JUNK_PACKETS Junk)
     return STATUS_SUCCESS;
 }
 
+_Must_inspect_result_
+static inline NTSTATUS
+ValidatePrefixSizes(_In_ CONST MESSAGE_PREFIX_SIZES Sizes)
+{
+    /* Each handshake field holds the total on-wire length, prefix + sizeof(MESSAGE_*), in a USHORT.
+     * A total below sizeof(MESSAGE_*) means the sum wrapped: prefix > MAXUSHORT - sizeof(MESSAGE_*). */
+    if (Sizes.HandshakeInitiation < sizeof(MESSAGE_HANDSHAKE_INITIATION))
+        return STATUS_INVALID_PARAMETER;
+    if (Sizes.HandshakeResponse < sizeof(MESSAGE_HANDSHAKE_RESPONSE))
+        return STATUS_INVALID_PARAMETER;
+    if (Sizes.HandshakeCookie < sizeof(MESSAGE_HANDSHAKE_COOKIE))
+        return STATUS_INVALID_PARAMETER;
+    if (Sizes.Data > MAX_PREFIX_SIZE_DATA)
+        return STATUS_INVALID_PARAMETER;
+    /* The receive path classifies incoming packets by exact on-wire length, so the three
+     * handshake totals must stay pairwise distinct; Data occupies a range and is exempt. */
+    if (Sizes.HandshakeInitiation == Sizes.HandshakeResponse || Sizes.HandshakeInitiation == Sizes.HandshakeCookie ||
+        Sizes.HandshakeResponse == Sizes.HandshakeCookie)
+        return STATUS_INVALID_PARAMETER;
+    return STATUS_SUCCESS;
+}
+
 _Requires_lock_held_(Wg->DeviceUpdateLock)
 static inline VOID
 SetJunkPackets(_Inout_ AWG_DEVICE *Wg, _In_ CONST JUNK_PACKETS Junk)
 {
     Wg->JunkPackets.Raw = Junk.Raw;
+}
+
+_Requires_lock_held_(Wg->DeviceUpdateLock)
+static inline VOID
+SetPrefixSizes(_Inout_ AWG_DEVICE *Wg, _In_ CONST MESSAGE_PREFIX_SIZES Sizes)
+{
+    Wg->PrefixSizes.Raw = Sizes.Raw;
 }
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
@@ -485,10 +548,11 @@ cleanupStack:
     return Status;
 }
 
-/* C4701 false positive: ProposedJunk is written and read under the same HAS_JUNK flag, so the
- * uninitialized read the analyzer warns about is unreachable; it simply cannot correlate the write
- * guard with the read guard. C4701 comes from whole-function data-flow analysis, so the suppression
- * must stay active across the entire function rather than at a single line. */
+/* C4701 false positive: ProposedJunk and ProposedSizes are each written and read under the same
+ * flag (HAS_JUNK and HAS_SIZES respectively), so the uninitialized reads the analyzer warns about
+ * are unreachable; it simply cannot correlate the write guards with the read guards. C4701 comes
+ * from whole-function data-flow analysis, so the suppression must stay active across the entire
+ * function rather than at a single line. */
 #pragma warning(push)
 #pragma warning(disable : 4701)
 _IRQL_requires_max_(PASSIVE_LEVEL)
@@ -517,6 +581,15 @@ SetInterface(
             goto cleanupLock;
     }
 
+    MESSAGE_PREFIX_SIZES ProposedSizes;
+    if (IoctlInterface.Flags & AWG_IOCTL_INTERFACE_HAS_SIZES)
+    {
+        ProposedSizes = MergePrefixSizes(Wg, &IoctlInterface);
+        Status = ValidatePrefixSizes(ProposedSizes);
+        if (!NT_SUCCESS(Status))
+            goto cleanupLock;
+    }
+
     if (IoctlInterface.Flags & AWG_IOCTL_INTERFACE_HAS_LISTEN_PORT)
     {
         Status = SetListenPort(Wg, IoctlInterface.ListenPort);
@@ -536,6 +609,9 @@ SetInterface(
 
     if (IoctlInterface.Flags & AWG_IOCTL_INTERFACE_HAS_JUNK)
         SetJunkPackets(Wg, ProposedJunk);
+
+    if (IoctlInterface.Flags & AWG_IOCTL_INTERFACE_HAS_SIZES)
+        SetPrefixSizes(Wg, ProposedSizes);
 
     CONST volatile AWG_IOCTL_PEER *UnsafeIoctlPeer =
         (CONST volatile AWG_IOCTL_PEER *)((UCHAR *)UnsafeIoctlInterface + sizeof(AWG_IOCTL_INTERFACE));

@@ -61,26 +61,41 @@ _Requires_lock_not_held_(Peer->Handshake.Lock)
 static VOID
 PacketSendHandshakeInitiation(_Inout_ AWG_PEER *Peer)
 {
-    MESSAGE_HANDSHAKE_INITIATION Packet;
-
     if (!BirthdateHasExpired(ReadNoFence64(&Peer->LastSentHandshake), REKEY_TIMEOUT))
         return; /* This function is rate limited. */
+
+    USHORT PacketSize = ReadUShortNoFence(&Peer->Device->PrefixSizes.HandshakeInitiation);
+    USHORT PrefixSize = PacketSize - sizeof(MESSAGE_HANDSHAKE_INITIATION);
+    ULONG BufferSize = ALIGN_UP_BY_T(ULONG, PacketSize, __alignof(MESSAGE_HANDSHAKE_INITIATION));
+    ULONG MessageOffset = BufferSize - sizeof(MESSAGE_HANDSHAKE_INITIATION);
+    ULONG PayloadOffset = MessageOffset - PrefixSize;
+
+    UCHAR *PacketBuffer = MemAllocate(BufferSize);
+    if (!PacketBuffer)
+        return;
+
+    if (PrefixSize)
+        SystemPrng(PacketBuffer + PayloadOffset, PrefixSize);
+
+    MESSAGE_HANDSHAKE_INITIATION *Message = (MESSAGE_HANDSHAKE_INITIATION *)(PacketBuffer + MessageOffset);
 
     WriteNoFence64(&Peer->LastSentHandshake, KeQueryInterruptTime());
     CHAR EndpointName[SOCKADDR_STR_MAX_LEN];
     SockaddrToString(EndpointName, &Peer->Endpoint.Addr);
     LogInfoRatelimited(Peer->Device, "Sending handshake initiation to peer %llu (%s)", Peer->InternalId, EndpointName);
 
-    if (NoiseHandshakeCreateInitiation(&Packet, &Peer->Handshake))
+    if (NoiseHandshakeCreateInitiation(Message, &Peer->Handshake))
     {
         SendJunkPackets(Peer);
-        CookieAddMacToPacket(&Packet, sizeof(Packet), Peer);
+        CookieAddMacToPacket(Message, sizeof(*Message), Peer);
         TimersAnyAuthenticatedPacketTraversal(Peer);
         TimersAnyAuthenticatedPacketSent(Peer);
         WriteNoFence64(&Peer->LastSentHandshake, KeQueryInterruptTime());
-        SocketSendBufferToPeer(Peer, &Packet, sizeof(Packet));
+        SocketSendBufferToPeer(Peer, PacketBuffer + PayloadOffset, PacketSize);
         TimersHandshakeInitiated(Peer);
     }
+
+    MemFree(PacketBuffer);
 }
 
 _Use_decl_annotations_
@@ -144,36 +159,65 @@ _Use_decl_annotations_
 VOID
 PacketSendHandshakeResponse(AWG_PEER *Peer)
 {
-    MESSAGE_HANDSHAKE_RESPONSE Packet;
+    USHORT PacketSize = ReadUShortNoFence(&Peer->Device->PrefixSizes.HandshakeResponse);
+    USHORT PrefixSize = PacketSize - sizeof(MESSAGE_HANDSHAKE_RESPONSE);
+    ULONG BufferSize = ALIGN_UP_BY_T(ULONG, PacketSize, __alignof(MESSAGE_HANDSHAKE_RESPONSE));
+    ULONG MessageOffset = BufferSize - sizeof(MESSAGE_HANDSHAKE_RESPONSE);
+    ULONG PayloadOffset = MessageOffset - PrefixSize;
+
+    UCHAR *PacketBuffer = MemAllocate(BufferSize);
+    if (!PacketBuffer)
+        return;
+
+    if (PrefixSize)
+        SystemPrng(PacketBuffer + PayloadOffset, PrefixSize);
+
+    MESSAGE_HANDSHAKE_RESPONSE *Message = (MESSAGE_HANDSHAKE_RESPONSE *)(PacketBuffer + MessageOffset);
 
     WriteNoFence64(&Peer->LastSentHandshake, KeQueryInterruptTime());
     CHAR EndpointName[SOCKADDR_STR_MAX_LEN];
     SockaddrToString(EndpointName, &Peer->Endpoint.Addr);
     LogInfoRatelimited(Peer->Device, "Sending handshake response to peer %llu (%s)", Peer->InternalId, EndpointName);
 
-    if (NoiseHandshakeCreateResponse(&Packet, &Peer->Handshake))
+    if (NoiseHandshakeCreateResponse(Message, &Peer->Handshake))
     {
-        CookieAddMacToPacket(&Packet, sizeof(Packet), Peer);
+        CookieAddMacToPacket(Message, sizeof(*Message), Peer);
         if (NoiseHandshakeBeginSession(&Peer->Handshake, &Peer->Keypairs))
         {
             TimersSessionDerived(Peer);
             TimersAnyAuthenticatedPacketTraversal(Peer);
             TimersAnyAuthenticatedPacketSent(Peer);
             WriteNoFence64(&Peer->LastSentHandshake, KeQueryInterruptTime());
-            SocketSendBufferToPeer(Peer, &Packet, sizeof(Packet));
+            SocketSendBufferToPeer(Peer, PacketBuffer + PayloadOffset, PacketSize);
         }
     }
+
+    MemFree(PacketBuffer);
 }
 
 _Use_decl_annotations_
 VOID
 PacketSendHandshakeCookie(AWG_DEVICE *Wg, CONST NET_BUFFER_LIST *InitiatingNbl, UINT32_LE SenderIndex)
 {
-    MESSAGE_HANDSHAKE_COOKIE Packet;
+    USHORT PacketSize = ReadUShortNoFence(&Wg->PrefixSizes.HandshakeCookie);
+    USHORT PrefixSize = PacketSize - sizeof(MESSAGE_HANDSHAKE_COOKIE);
+    ULONG BufferSize = ALIGN_UP_BY_T(ULONG, PacketSize, __alignof(MESSAGE_HANDSHAKE_COOKIE));
+    ULONG MessageOffset = BufferSize - sizeof(MESSAGE_HANDSHAKE_COOKIE);
+    ULONG PayloadOffset = MessageOffset - PrefixSize;
+
+    UCHAR *PacketBuffer = MemAllocate(BufferSize);
+    if (!PacketBuffer)
+        return;
+
+    if (PrefixSize)
+        SystemPrng(PacketBuffer + PayloadOffset, PrefixSize);
+
+    MESSAGE_HANDSHAKE_COOKIE *Message = (MESSAGE_HANDSHAKE_COOKIE *)(PacketBuffer + MessageOffset);
 
     LogInfoNblRatelimited(Wg, "Sending cookie response for denied handshake message for %s", InitiatingNbl);
-    CookieMessageCreate(&Packet, InitiatingNbl, SenderIndex, &Wg->CookieChecker);
-    SocketSendBufferAsReplyToNbl(Wg, InitiatingNbl, &Packet, sizeof(Packet));
+    CookieMessageCreate(Message, InitiatingNbl, SenderIndex, &Wg->CookieChecker);
+    SocketSendBufferAsReplyToNbl(Wg, InitiatingNbl, PacketBuffer + PayloadOffset, PacketSize);
+    MemFree(PacketBuffer);
 }
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
@@ -218,7 +262,7 @@ CalculateNblPadding(_In_ CONST NET_BUFFER *Nb, _In_ UINT32 Mtu)
 #pragma prefast(push)
 #pragma prefast(disable : cpp / drivers / opaque - mdl - write) /* We're intentionally twiddling with MDLs. */
 #pragma prefast(disable : cpp / drivers / opaque - mdl - use)   /* We're intentionally twiddling with MDLs. */
-_IRQL_requires_max_(DISPATCH_LEVEL)
+_IRQL_requires_max_(PASSIVE_LEVEL)
 _Must_inspect_result_
 static BOOLEAN
 EncryptPacket(
@@ -226,10 +270,14 @@ EncryptPacket(
     _Inout_ NET_BUFFER *NbOut,
     _Inout_ NET_BUFFER *NbIn,
     _In_ CONST NOISE_KEYPAIR *Keypair,
-    _In_ UINT32 Mtu)
+    _In_ UINT32 Mtu,
+    _In_ USHORT PrefixSize)
 {
     ULONG PaddingLen = CalculateNblPadding(NbIn, Mtu);
     UCHAR *OutBuffer = MemGetValidatedNetBufferData(NbOut);
+    if (PrefixSize)
+        SystemPrng(OutBuffer, PrefixSize);
+    OutBuffer += PrefixSize;
     *(MESSAGE_DATA *)OutBuffer = (MESSAGE_DATA){ .Header.Type = CpuToLe32(MESSAGE_TYPE_DATA),
                                                  .KeyIdx = Keypair->RemoteIndex,
                                                  .Counter = CpuToLe64(NET_BUFFER_NONCE(NbOut)) };
@@ -271,7 +319,7 @@ EncryptPacket(
         NET_BUFFER_NONCE(NbOut),
         Keypair->Sending.Key,
         Simd);
-    NET_BUFFER_DATA_LENGTH(NbOut) = MessageDataLen(NET_BUFFER_DATA_LENGTH(NbIn));
+    NET_BUFFER_DATA_LENGTH(NbOut) = MessageDataLen(NET_BUFFER_DATA_LENGTH(NbIn)) + PrefixSize;
     NET_BUFFER_DATA_OFFSET(NbOut) = NET_BUFFER_CURRENT_MDL_OFFSET(NbOut) = 0;
     if (PaddingLen)
     {
@@ -292,9 +340,11 @@ PacketSendKeepalive(AWG_PEER *Peer)
 
     if (NetBufferListIsQueueEmpty(&Peer->StagedPacketQueue))
     {
-        Nbl = MemAllocateNetBufferList(0, 0, sizeof(MESSAGE_DATA) + NoiseEncryptedLen(0));
+        USHORT PrefixSize = ReadUShortNoFence(&Peer->Device->PrefixSizes.Data);
+        Nbl = MemAllocateNetBufferList(0, 0, sizeof(MESSAGE_DATA) + NoiseEncryptedLen(0) + PrefixSize);
         if (!Nbl)
             return;
+        NET_BUFFER_LIST_PREFIX_SIZE(Nbl) = PrefixSize;
         Nbl->ParentNetBufferList = Nbl;
         NetBufferListInterlockedEnqueue(&Peer->StagedPacketQueue, Nbl);
         CHAR EndpointName[SOCKADDR_STR_MAX_LEN];
@@ -379,12 +429,13 @@ PacketEncryptWorker(MULTICORE_WORKQUEUE *WorkQueue)
 
         for (NET_BUFFER_LIST *Nbl = First; Nbl; Nbl = NET_BUFFER_LIST_NEXT_NBL(Nbl))
         {
+            USHORT PrefixSize = NET_BUFFER_LIST_PREFIX_SIZE(Nbl);
             for (NET_BUFFER *NbIn = NET_BUFFER_LIST_FIRST_NB(Nbl->ParentNetBufferList),
                             *NbOut = NET_BUFFER_LIST_FIRST_NB(Nbl);
                  NbIn && NbOut && State == PACKET_STATE_CRYPTED;
                  NbIn = NET_BUFFER_NEXT_NB(NbIn), NbOut = NET_BUFFER_NEXT_NB(NbOut))
             {
-                if (!EncryptPacket(&Simd, NbOut, NbIn, Keypair, Mtu))
+                if (!EncryptPacket(&Simd, NbOut, NbIn, Keypair, Mtu, PrefixSize))
                     State = PACKET_STATE_DEAD;
             }
             if (Nbl != Nbl->ParentNetBufferList)
@@ -512,17 +563,18 @@ outNokey:
         if (Nbl->ParentNetBufferList == Nbl)
             goto requeueOrphan;
 
+        USHORT PrefixSize = NET_BUFFER_LIST_PREFIX_SIZE(Nbl);
         for (NET_BUFFER *NbIn = NET_BUFFER_LIST_FIRST_NB(Nbl->ParentNetBufferList),
                         *NbOut = NET_BUFFER_LIST_FIRST_NB(Nbl);
              NbIn && NbOut;
              NbIn = NET_BUFFER_NEXT_NB(NbIn), NbOut = NET_BUFFER_NEXT_NB(NbOut))
         {
-            VOID *Dst = (UCHAR *)MemGetValidatedNetBufferData(NbOut) + sizeof(MESSAGE_DATA);
+            VOID *Dst = (UCHAR *)MemGetValidatedNetBufferData(NbOut) + sizeof(MESSAGE_DATA) + PrefixSize;
             VOID *Src = NdisGetDataBuffer(NbIn, NET_BUFFER_DATA_LENGTH(NbIn), Dst, 1, 0);
             if (Src != Dst)
                 RtlCopyMemory(Dst, Src, NET_BUFFER_DATA_LENGTH(NbIn));
             NET_BUFFER_DATA_LENGTH(NbOut) = NET_BUFFER_DATA_LENGTH(NbIn);
-            NET_BUFFER_DATA_OFFSET(NbOut) = NET_BUFFER_CURRENT_MDL_OFFSET(NbOut) = sizeof(MESSAGE_DATA);
+            NET_BUFFER_DATA_OFFSET(NbOut) = NET_BUFFER_CURRENT_MDL_OFFSET(NbOut) = sizeof(MESSAGE_DATA) + PrefixSize;
         }
         FreeSendNetBufferList(Peer->Device, Nbl->ParentNetBufferList, 0);
         Nbl->ParentNetBufferList = Nbl;

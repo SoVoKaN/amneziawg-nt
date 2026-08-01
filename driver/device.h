@@ -14,6 +14,7 @@
 #include "rcu.h"
 #include "logging.h"
 #include "junk.h"
+#include "sizes.h"
 #include <ntifs.h> /* Must be included before <wdm.h> */
 #include <wdm.h>
 
@@ -95,6 +96,7 @@ typedef struct _AWG_DEVICE
     LOG_RING Log;
     LIST_ENTRY DeviceList;
     JUNK_PACKETS JunkPackets;
+    MESSAGE_PREFIX_SIZES PrefixSizes;
 } AWG_DEVICE;
 
 _Requires_lock_held_(Wg->DeviceUpdateLock)

@@ -239,6 +239,20 @@ Typedef'd as `AMNEZIAWG_GET_ADAPTER_STATE`.  Gets whether the specified adapter 
 |`DWORD`|PeersCount|Number of peer structures following this structure.|
 |`WORD`|JunkMinSize|Minimum size in bytes of each junk packet, up to `JunkMaxSize`.|
 |`WORD`|JunkMaxSize|Maximum size in bytes of each junk packet, at least `JunkMinSize`.|
+|`WORD`|SizeHandshakeInitiation|Bytes of random junk prepended to the handshake initiation message, up to `MAXUSHORT - sizeof(MESSAGE_HANDSHAKE_INITIATION)`.|
+|`WORD`|SizeHandshakeResponse|Bytes of random junk prepended to the handshake response message, up to `MAXUSHORT - sizeof(MESSAGE_HANDSHAKE_RESPONSE)`.|
+|`WORD`|SizeHandshakeCookie|Bytes of random junk prepended to the handshake cookie message, up to `MAXUSHORT - sizeof(MESSAGE_HANDSHAKE_COOKIE)`.|
+|`WORD`|SizeData|Bytes of random junk prepended to the data message, up to `MAX_PREFIX_SIZE_DATA`.|
+
+The receiver classifies incoming handshake packets solely by their total on-wire length:
+
+|Message|Total on-wire length|
+|--|--|
+|Handshake initiation|`SizeHandshakeInitiation + 148`|
+|Handshake response|`SizeHandshakeResponse + 92`|
+|Handshake cookie|`SizeHandshakeCookie + 64`|
+
+The three totals must be pairwise distinct. `AmneziaWGSetConfiguration` rejects configurations where any two coincide with `ERROR_INVALID_PARAMETER`.
 
 ### Structure: `AMNEZIAWG_PEER` - a peer.
 
@@ -281,6 +295,10 @@ These values may be or'd together.
 |`AMNEZIAWG_INTERFACE_HAS_JUNK_COUNT`|The JunkCount field is set.|
 |`AMNEZIAWG_INTERFACE_HAS_JUNK_MIN_SIZE`|The JunkMinSize field is set.|
 |`AMNEZIAWG_INTERFACE_HAS_JUNK_MAX_SIZE`|The JunkMaxSize field is set.|
+|`AMNEZIAWG_INTERFACE_HAS_SIZE_HANDSHAKE_INITIATION`|The SizeHandshakeInitiation field is set.|
+|`AMNEZIAWG_INTERFACE_HAS_SIZE_HANDSHAKE_RESPONSE`|The SizeHandshakeResponse field is set.|
+|`AMNEZIAWG_INTERFACE_HAS_SIZE_HANDSHAKE_COOKIE`|The SizeHandshakeCookie field is set.|
+|`AMNEZIAWG_INTERFACE_HAS_SIZE_DATA`|The SizeData field is set.|
 
 ### Enumeration: `AMNEZIAWG_PEER_FLAG` - bitwise flags for peers.
 

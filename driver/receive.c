@@ -518,7 +518,7 @@ _IRQL_requires_max_(DISPATCH_LEVEL)
 _Return_type_success_(return == TRUE)
 _Must_inspect_result_
 static BOOLEAN
-PrepareNetBufferListHeader(_Inout_ NET_BUFFER_LIST *Nbl)
+PrepareNetBufferListHeader(_In_ AWG_DEVICE *Wg, _Inout_ NET_BUFFER_LIST *Nbl)
 {
     WSK_BUF *Buffer = &NET_BUFFER_LIST_DATAGRAM_INDICATION(Nbl)->Buffer;
     if (Buffer->Length < sizeof(MESSAGE_HEADER))
@@ -538,24 +538,86 @@ PrepareNetBufferListHeader(_Inout_ NET_BUFFER_LIST *Nbl)
     if (!Src)
         return FALSE;
     Src += Buffer->Offset;
-    MESSAGE_HEADER *Header = MemGetValidatedNetBufferListData(Nbl);
-    RtlCopyMemory(Header, Src, sizeof(*Header));
-    ULONG HeaderLen;
-    BOOLEAN LenIsValid;
-    if (Header->Type == CpuToLe32(MESSAGE_TYPE_DATA))
-        HeaderLen = sizeof(MESSAGE_DATA), LenIsValid = Buffer->Length >= MESSAGE_MINIMUM_LENGTH;
-    else if (Header->Type == CpuToLe32(MESSAGE_TYPE_HANDSHAKE_INITIATION))
-        HeaderLen = sizeof(MESSAGE_HANDSHAKE_INITIATION), LenIsValid = Buffer->Length == HeaderLen;
-    else if (Header->Type == CpuToLe32(MESSAGE_TYPE_HANDSHAKE_RESPONSE))
-        HeaderLen = sizeof(MESSAGE_HANDSHAKE_RESPONSE), LenIsValid = Buffer->Length == HeaderLen;
-    else if (Header->Type == CpuToLe32(MESSAGE_TYPE_HANDSHAKE_COOKIE))
-        HeaderLen = sizeof(MESSAGE_HANDSHAKE_COOKIE), LenIsValid = Buffer->Length == HeaderLen;
-    else
-        return FALSE;
-    if (!LenIsValid || MdlLen < HeaderLen)
-        return FALSE;
-    RtlCopyMemory(Header + 1, Src + sizeof(*Header), HeaderLen - sizeof(*Header));
-    return TRUE;
+
+    MESSAGE_PREFIX_SIZES PrefixSizes = { .Raw = ReadULong64NoFence(&Wg->PrefixSizes.Raw) };
+    if (Buffer->Length == PrefixSizes.HandshakeInitiation)
+    {
+        if (MdlLen < PrefixSizes.HandshakeInitiation)
+            return FALSE;
+
+        UCHAR *Message = Src + PrefixSizes.HandshakeInitiation - sizeof(MESSAGE_HANDSHAKE_INITIATION);
+        MESSAGE_HEADER *MessageHeader = MemGetValidatedNetBufferListData(Nbl);
+        RtlCopyMemory(MessageHeader, Message, sizeof(*MessageHeader));
+
+        if (MessageHeader->Type != CpuToLe32(MESSAGE_TYPE_HANDSHAKE_INITIATION))
+            goto tryData;
+
+        RtlCopyMemory(
+            MessageHeader + 1,
+            Message + sizeof(*MessageHeader),
+            sizeof(MESSAGE_HANDSHAKE_INITIATION) - sizeof(*MessageHeader));
+        NET_BUFFER_DATA_LENGTH(NET_BUFFER_LIST_FIRST_NB(Nbl)) = sizeof(MESSAGE_HANDSHAKE_INITIATION);
+        return TRUE;
+    }
+    else if (Buffer->Length == PrefixSizes.HandshakeResponse)
+    {
+        if (MdlLen < PrefixSizes.HandshakeResponse)
+            return FALSE;
+
+        UCHAR *Message = Src + PrefixSizes.HandshakeResponse - sizeof(MESSAGE_HANDSHAKE_RESPONSE);
+        MESSAGE_HEADER *MessageHeader = MemGetValidatedNetBufferListData(Nbl);
+        RtlCopyMemory(MessageHeader, Message, sizeof(*MessageHeader));
+
+        if (MessageHeader->Type != CpuToLe32(MESSAGE_TYPE_HANDSHAKE_RESPONSE))
+            goto tryData;
+
+        RtlCopyMemory(
+            MessageHeader + 1,
+            Message + sizeof(*MessageHeader),
+            sizeof(MESSAGE_HANDSHAKE_RESPONSE) - sizeof(*MessageHeader));
+        NET_BUFFER_DATA_LENGTH(NET_BUFFER_LIST_FIRST_NB(Nbl)) = sizeof(MESSAGE_HANDSHAKE_RESPONSE);
+        return TRUE;
+    }
+    else if (Buffer->Length == PrefixSizes.HandshakeCookie)
+    {
+        if (MdlLen < PrefixSizes.HandshakeCookie)
+            return FALSE;
+
+        UCHAR *Message = Src + PrefixSizes.HandshakeCookie - sizeof(MESSAGE_HANDSHAKE_COOKIE);
+        MESSAGE_HEADER *MessageHeader = MemGetValidatedNetBufferListData(Nbl);
+        RtlCopyMemory(MessageHeader, Message, sizeof(*MessageHeader));
+
+        if (MessageHeader->Type != CpuToLe32(MESSAGE_TYPE_HANDSHAKE_COOKIE))
+            goto tryData;
+
+        RtlCopyMemory(
+            MessageHeader + 1,
+            Message + sizeof(*MessageHeader),
+            sizeof(MESSAGE_HANDSHAKE_COOKIE) - sizeof(*MessageHeader));
+        NET_BUFFER_DATA_LENGTH(NET_BUFFER_LIST_FIRST_NB(Nbl)) = sizeof(MESSAGE_HANDSHAKE_COOKIE);
+        return TRUE;
+    }
+tryData:
+    if (Buffer->Length >= PrefixSizes.Data + MESSAGE_MINIMUM_LENGTH)
+    {
+        if (MdlLen < PrefixSizes.Data + sizeof(MESSAGE_DATA))
+            return FALSE;
+
+        Src += PrefixSizes.Data;
+        Buffer->Offset += PrefixSizes.Data;
+        Buffer->Length -= PrefixSizes.Data;
+        MdlLen -= PrefixSizes.Data;
+
+        MESSAGE_HEADER *MessageHeader = MemGetValidatedNetBufferListData(Nbl);
+        RtlCopyMemory(MessageHeader, Src, sizeof(*MessageHeader));
+
+        if (MessageHeader->Type != CpuToLe32(MESSAGE_TYPE_DATA))
+            return FALSE;
+
+        RtlCopyMemory(MessageHeader + 1, Src + sizeof(*MessageHeader), sizeof(MESSAGE_DATA) - sizeof(*MessageHeader));
+        return TRUE;
+    }
+    return FALSE;
 }
 
 _Use_decl_annotations_
@@ -568,7 +630,7 @@ PacketReceive(AWG_DEVICE *Wg, NET_BUFFER_LIST *First)
         NextNbl = NET_BUFFER_LIST_NEXT_NBL(Nbl);
         NET_BUFFER_LIST_NEXT_NBL(Nbl) = NULL;
 
-        if (!PrepareNetBufferListHeader(Nbl))
+        if (!PrepareNetBufferListHeader(Wg, Nbl))
             goto cleanup;
         switch (NBL_TYPE_LE32(Nbl))
         {

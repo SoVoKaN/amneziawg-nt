@@ -108,6 +108,7 @@ PeerSerialDequeue(_Inout_ PEER_SERIAL *Serial)
 /*
  * NBL[0] = crypt state
  * NBL[1] = prev queue link
+ * NBL Scratch = padding size snapshot (tx only)
  * NB[0-1] = nonce
  * NB[2] = keypair
  * NB[3] = wsk datagram indication (rx only)
@@ -118,6 +119,7 @@ PeerSerialDequeue(_Inout_ PEER_SERIAL *Serial)
 #define NET_BUFFER_LIST_PEER(Nbl) (NET_BUFFER_LIST_KEYPAIR(Nbl)->Entry.Peer)
 #define NET_BUFFER_LIST_CRYPT_STATE(Nbl) ((LONG *)&NET_BUFFER_LIST_MINIPORT_RESERVED(Nbl)[0])
 #define NET_BUFFER_LIST_PER_PEER_LIST_LINK(Nbl) (*(NET_BUFFER_LIST **)&NET_BUFFER_LIST_MINIPORT_RESERVED(Nbl)[1])
+#define NET_BUFFER_LIST_PREFIX_SIZE(Nbl) (*(USHORT *)&(Nbl)->Scratch)
 #define NET_BUFFER_LIST_PROTOCOL(Nbl) ((UINT16_BE)(ULONG_PTR)NET_BUFFER_LIST_INFO(Nbl, NetBufferListProtocolId))
 #define NET_BUFFER_LIST_DATAGRAM_INDICATION(Nbl) \
     (*(WSK_DATAGRAM_INDICATION **)&NET_BUFFER_MINIPORT_RESERVED(NET_BUFFER_LIST_FIRST_NB(Nbl))[3])
@@ -146,13 +148,13 @@ _IRQL_requires_max_(DISPATCH_LEVEL)
 VOID
 PacketSendQueuedHandshakeInitiation(_Inout_ AWG_PEER *Peer, _In_ BOOLEAN IsRetry);
 
-_IRQL_requires_max_(APC_LEVEL)
+_IRQL_requires_max_(PASSIVE_LEVEL)
 _Requires_lock_not_held_(Peer->Handshake.StaticIdentity->Lock)
 _Requires_lock_not_held_(Peer->Handshake.Lock)
 VOID
 PacketSendHandshakeResponse(_Inout_ AWG_PEER *Peer);
 
-_IRQL_requires_max_(APC_LEVEL)
+_IRQL_requires_max_(PASSIVE_LEVEL)
 VOID
 PacketSendHandshakeCookie(
     _Inout_ AWG_DEVICE *Wg,

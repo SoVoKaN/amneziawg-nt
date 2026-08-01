@@ -126,6 +126,7 @@ SendNetBufferLists(
     ULONG SendFlags)
 {
     AWG_DEVICE *Wg = (AWG_DEVICE *)MiniportAdapterContext;
+    USHORT PrefixSize = ReadUShortNoFence(&Wg->PrefixSizes.Data);
     ULONG CompleteFlags = 0;
     if (SendFlags & NDIS_SEND_FLAGS_DISPATCH_LEVEL)
         CompleteFlags |= NDIS_SEND_COMPLETE_FLAGS_DISPATCH_LEVEL;
@@ -158,13 +159,14 @@ SendNetBufferLists(
         }
 
         NET_BUFFER_LIST *CloneNbl = MemAllocateNetBufferListWithClonedGeometry(
-            Nbl, sizeof(MESSAGE_DATA) + NoiseEncryptedLen(0) + MESSAGE_PADDING_MULTIPLE - 1);
+            Nbl, sizeof(MESSAGE_DATA) + NoiseEncryptedLen(0) + MESSAGE_PADDING_MULTIPLE - 1 + PrefixSize);
         if (!CloneNbl)
         {
             NET_BUFFER_LIST_STATUS(Nbl) = NDIS_STATUS_RESOURCES;
             ++Wg->Statistics.ifOutDiscards;
             goto cleanupNbl;
         }
+        NET_BUFFER_LIST_PREFIX_SIZE(CloneNbl) = PrefixSize;
         Nbl = CloneNbl;
 
         CONST UINT16_BE Protocol = NET_BUFFER_LIST_PROTOCOL(Nbl);
@@ -422,6 +424,11 @@ InitializeEx(
     Wg->InterfaceIndex = MiniportInitParameters->IfIndex;
     Wg->InterfaceLuid = MiniportInitParameters->NetLuid;
     LogRingInit(&Wg->Log);
+
+    Wg->PrefixSizes = (MESSAGE_PREFIX_SIZES){ .HandshakeInitiation = sizeof(MESSAGE_HANDSHAKE_INITIATION),
+                                              .HandshakeResponse = sizeof(MESSAGE_HANDSHAKE_RESPONSE),
+                                              .HandshakeCookie = sizeof(MESSAGE_HANDSHAKE_COOKIE),
+                                              .Data = 0 };
 
     ExInitializeRundownProtection(&Wg->ItemsInFlight);
     ExRundownCompleted(&Wg->ItemsInFlight); /* Wait until Restart is called to mark this active. */

@@ -257,13 +257,17 @@ struct ALIGNED(8) _AMNEZIAWG_PEER
 
 typedef enum
 {
-    AMNEZIAWG_INTERFACE_HAS_PUBLIC_KEY = 1 << 0,    /**< The PublicKey field is set */
-    AMNEZIAWG_INTERFACE_HAS_PRIVATE_KEY = 1 << 1,   /**< The PrivateKey field is set */
-    AMNEZIAWG_INTERFACE_HAS_LISTEN_PORT = 1 << 2,   /**< The ListenPort field is set */
-    AMNEZIAWG_INTERFACE_REPLACE_PEERS = 1 << 3,     /**< Remove all peers before adding new ones */
-    AMNEZIAWG_INTERFACE_HAS_JUNK_COUNT = 1 << 4,    /**< The JunkCount field is set */
-    AMNEZIAWG_INTERFACE_HAS_JUNK_MIN_SIZE = 1 << 5, /**< The JunkMinSize field is set */
-    AMNEZIAWG_INTERFACE_HAS_JUNK_MAX_SIZE = 1 << 6  /**< The JunkMaxSize field is set */
+    AMNEZIAWG_INTERFACE_HAS_PUBLIC_KEY = 1 << 0,                /**< The PublicKey field is set */
+    AMNEZIAWG_INTERFACE_HAS_PRIVATE_KEY = 1 << 1,               /**< The PrivateKey field is set */
+    AMNEZIAWG_INTERFACE_HAS_LISTEN_PORT = 1 << 2,               /**< The ListenPort field is set */
+    AMNEZIAWG_INTERFACE_REPLACE_PEERS = 1 << 3,                 /**< Remove all peers before adding new ones */
+    AMNEZIAWG_INTERFACE_HAS_JUNK_COUNT = 1 << 4,                /**< The JunkCount field is set */
+    AMNEZIAWG_INTERFACE_HAS_JUNK_MIN_SIZE = 1 << 5,             /**< The JunkMinSize field is set */
+    AMNEZIAWG_INTERFACE_HAS_JUNK_MAX_SIZE = 1 << 6,             /**< The JunkMaxSize field is set */
+    AMNEZIAWG_INTERFACE_HAS_SIZE_HANDSHAKE_INITIATION = 1 << 7, /**< The SizeHandshakeInitiation field is set */
+    AMNEZIAWG_INTERFACE_HAS_SIZE_HANDSHAKE_RESPONSE = 1 << 8,   /**< The SizeHandshakeResponse field is set */
+    AMNEZIAWG_INTERFACE_HAS_SIZE_HANDSHAKE_COOKIE = 1 << 9,     /**< The SizeHandshakeCookie field is set */
+    AMNEZIAWG_INTERFACE_HAS_SIZE_DATA = 1 << 10                 /**< The SizeData field is set */
 } AMNEZIAWG_INTERFACE_FLAG;
 DEFINE_ENUM_FLAG_OPERATORS(AMNEZIAWG_INTERFACE_FLAG)
 
@@ -278,6 +282,10 @@ struct ALIGNED(8) _AMNEZIAWG_INTERFACE
     DWORD PeersCount;                      /**< Number of peer structs following this struct */
     WORD JunkMinSize;                      /**< Minimum size in bytes of each junk packet */
     WORD JunkMaxSize;                      /**< Maximum size in bytes of each junk packet */
+    WORD SizeHandshakeInitiation;          /**< Bytes of random junk prepended to the handshake initiation message */
+    WORD SizeHandshakeResponse;            /**< Bytes of random junk prepended to the handshake response message */
+    WORD SizeHandshakeCookie;              /**< Bytes of random junk prepended to the handshake cookie message */
+    WORD SizeData;                         /**< Bytes of random junk prepended to the data message */
 };
 
 /**

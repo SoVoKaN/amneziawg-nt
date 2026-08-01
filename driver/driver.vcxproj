@@ -94,6 +94,7 @@
     <ClInclude Include="queueing.h" />
     <ClInclude Include="ratelimiter.h" />
     <ClInclude Include="rcu.h" />
+    <ClInclude Include="sizes.h" />
     <ClInclude Include="socket.h" />
     <ClInclude Include="timers.h" />
     <ClInclude Include="undocumented.h" />

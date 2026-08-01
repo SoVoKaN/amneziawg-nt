@@ -60,6 +60,33 @@ static_assert(
     RTL_FIELD_SIZE(AWG_IOCTL_INTERFACE, JunkMaxSize) == RTL_FIELD_SIZE(AMNEZIAWG_INTERFACE, JunkMaxSize),
     "Interface->JunkMaxSize struct mismatch");
 static_assert(
+    offsetof(AWG_IOCTL_INTERFACE, SizeHandshakeInitiation) == offsetof(AMNEZIAWG_INTERFACE, SizeHandshakeInitiation),
+    "Interface->SizeHandshakeInitiation struct mismatch");
+static_assert(
+    RTL_FIELD_SIZE(AWG_IOCTL_INTERFACE, SizeHandshakeInitiation) ==
+        RTL_FIELD_SIZE(AMNEZIAWG_INTERFACE, SizeHandshakeInitiation),
+    "Interface->SizeHandshakeInitiation struct mismatch");
+static_assert(
+    offsetof(AWG_IOCTL_INTERFACE, SizeHandshakeResponse) == offsetof(AMNEZIAWG_INTERFACE, SizeHandshakeResponse),
+    "Interface->SizeHandshakeResponse struct mismatch");
+static_assert(
+    RTL_FIELD_SIZE(AWG_IOCTL_INTERFACE, SizeHandshakeResponse) ==
+        RTL_FIELD_SIZE(AMNEZIAWG_INTERFACE, SizeHandshakeResponse),
+    "Interface->SizeHandshakeResponse struct mismatch");
+static_assert(
+    offsetof(AWG_IOCTL_INTERFACE, SizeHandshakeCookie) == offsetof(AMNEZIAWG_INTERFACE, SizeHandshakeCookie),
+    "Interface->SizeHandshakeCookie struct mismatch");
+static_assert(
+    RTL_FIELD_SIZE(AWG_IOCTL_INTERFACE, SizeHandshakeCookie) ==
+        RTL_FIELD_SIZE(AMNEZIAWG_INTERFACE, SizeHandshakeCookie),
+    "Interface->SizeHandshakeCookie struct mismatch");
+static_assert(
+    offsetof(AWG_IOCTL_INTERFACE, SizeData) == offsetof(AMNEZIAWG_INTERFACE, SizeData),
+    "Interface->SizeData struct mismatch");
+static_assert(
+    RTL_FIELD_SIZE(AWG_IOCTL_INTERFACE, SizeData) == RTL_FIELD_SIZE(AMNEZIAWG_INTERFACE, SizeData),
+    "Interface->SizeData struct mismatch");
+static_assert(
     (DWORD)AWG_IOCTL_INTERFACE_HAS_PUBLIC_KEY == (DWORD)AMNEZIAWG_INTERFACE_HAS_PUBLIC_KEY,
     "INTERFACE_HAS_PUBLIC_KEY flag mismatch");
 static_assert(
@@ -80,6 +107,19 @@ static_assert(
 static_assert(
     (DWORD)AWG_IOCTL_INTERFACE_HAS_JUNK_MAX_SIZE == (DWORD)AMNEZIAWG_INTERFACE_HAS_JUNK_MAX_SIZE,
     "INTERFACE_HAS_JUNK_MAX_SIZE flag mismatch");
+static_assert(
+    (DWORD)AWG_IOCTL_INTERFACE_HAS_SIZE_HANDSHAKE_INITIATION ==
+        (DWORD)AMNEZIAWG_INTERFACE_HAS_SIZE_HANDSHAKE_INITIATION,
+    "INTERFACE_HAS_SIZE_HANDSHAKE_INITIATION flag mismatch");
+static_assert(
+    (DWORD)AWG_IOCTL_INTERFACE_HAS_SIZE_HANDSHAKE_RESPONSE == (DWORD)AMNEZIAWG_INTERFACE_HAS_SIZE_HANDSHAKE_RESPONSE,
+    "INTERFACE_HAS_SIZE_HANDSHAKE_RESPONSE flag mismatch");
+static_assert(
+    (DWORD)AWG_IOCTL_INTERFACE_HAS_SIZE_HANDSHAKE_COOKIE == (DWORD)AMNEZIAWG_INTERFACE_HAS_SIZE_HANDSHAKE_COOKIE,
+    "INTERFACE_HAS_SIZE_HANDSHAKE_COOKIE flag mismatch");
+static_assert(
+    (DWORD)AWG_IOCTL_INTERFACE_HAS_SIZE_DATA == (DWORD)AMNEZIAWG_INTERFACE_HAS_SIZE_DATA,
+    "INTERFACE_HAS_SIZE_DATA flag mismatch");
 static_assert(sizeof(AWG_IOCTL_PEER) == sizeof(AMNEZIAWG_PEER), "Peer struct mismatch");
 static_assert(offsetof(AWG_IOCTL_PEER, Flags) == offsetof(AMNEZIAWG_PEER, Flags), "Peer->Flags struct mismatch");
 static_assert(
