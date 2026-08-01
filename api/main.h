@@ -7,12 +7,8 @@
 
 #include <Windows.h>
 
-#if defined(_M_IX86)
-#    define IMAGE_FILE_PROCESS IMAGE_FILE_MACHINE_I386
-#elif defined(_M_AMD64)
+#if defined(_M_AMD64)
 #    define IMAGE_FILE_PROCESS IMAGE_FILE_MACHINE_AMD64
-#elif defined(_M_ARM)
-#    define IMAGE_FILE_PROCESS IMAGE_FILE_MACHINE_ARMNT
 #elif defined(_M_ARM64)
 #    define IMAGE_FILE_PROCESS IMAGE_FILE_MACHINE_ARM64
 #else

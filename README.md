@@ -1,7 +1,7 @@
 # AmneziaWG for the NT Kernel
 ### High performance in-kernel AmneziaWG implementation for Windows
 
-AmneziaWGNT is an implementation of AmneziaWG, for the NT Kernel as used in Windows 10 and 11, supporting AMD64, x86, and ARM64 processors.
+AmneziaWGNT is an implementation of AmneziaWG, for the NT Kernel as used in Windows 10 and 11, supporting AMD64 and ARM64 processors.
 
 #### Not the droids you're looking for
 

@@ -53,13 +53,8 @@ typedef _Strict_type_match_ UINT64 UINT64_LE;
 #define Htons(X) CpuToBe16(X)
 #define Htonl(X) CpuToBe32(X)
 
-#ifdef _WIN64
-#    define BITS_PER_POINTER 64
-#    define BITS_PER_POINTER_SHIFT 6
-#else
-#    define BITS_PER_POINTER 32
-#    define BITS_PER_POINTER_SHIFT 5
-#endif
+#define BITS_PER_POINTER 64
+#define BITS_PER_POINTER_SHIFT 6
 
 static inline ULONG
 FindLastSet32(_In_ UINT32 Word)
@@ -94,9 +89,7 @@ RounddownPowOfTwo(_In_ ULONG_PTR N)
     N = N | (N >> 4);
     N = N | (N >> 8);
     N = N | (N >> 16);
-#ifdef _WIN64
     N = N | (N >> 32);
-#endif
     return N - (N >> 1);
 }
 

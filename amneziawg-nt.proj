@@ -15,27 +15,17 @@
   <Import Project="amneziawg-nt.props" />
   <Import Project="amneziawg-nt.props.user" Condition="exists('amneziawg-nt.props.user')" />
 
-  <Target Name="Driver" DependsOnTargets="Driver-x86;Driver-amd64;Driver-arm64" />
-  <Target Name="Dll"    DependsOnTargets="Dll-x86;Dll-amd64;Dll-arm64" />
+  <Target Name="Driver" DependsOnTargets="Driver-amd64;Driver-arm64" />
+  <Target Name="Dll"    DependsOnTargets="Dll-amd64;Dll-arm64" />
   <Target Name="Clean">
     <RemoveDir Directories="$(Configuration)\amd64\" />
-    <RemoveDir Directories="$(Configuration)\arm\" />
     <RemoveDir Directories="$(Configuration)\arm64\" />
-    <RemoveDir Directories="$(Configuration)\x86\" />
     <RemoveDir Directories="dist\" />
   </Target>
 
-  <Target Name="Driver-x86"
-    Outputs="$(Configuration)\x86\driver\amneziawg.sys;$(Configuration)\x86\driver\amneziawg.inf;$(Configuration)\x86\driver\amneziawg.cat">
-    <MSBuild Projects="driver\driver.vcxproj" Targets="Build" Properties="Configuration=$(Configuration);Platform=Win32" />
-  </Target>
   <Target Name="Driver-amd64"
     Outputs="$(Configuration)\amd64\driver\amneziawg.sys;$(Configuration)\amd64\driver\amneziawg.inf;$(Configuration)\amd64\driver\amneziawg.cat">
     <MSBuild Projects="driver\driver.vcxproj" Targets="Build" Properties="Configuration=$(Configuration);Platform=x64" />
-  </Target>
-  <Target Name="Driver-arm"
-    Outputs="$(Configuration)\arm\driver\amneziawg.sys;$(Configuration)\arm\driver\amneziawg.inf;$(Configuration)\arm\driver\amneziawg.cat">
-    <MSBuild Projects="driver\driver.vcxproj" Targets="Build" Properties="Configuration=$(Configuration);Platform=ARM" />
   </Target>
   <Target Name="Driver-arm64"
     Outputs="$(Configuration)\arm64\driver\amneziawg.sys;$(Configuration)\arm64\driver\amneziawg.inf;$(Configuration)\arm64\driver\amneziawg.cat">
@@ -45,20 +35,10 @@
   <!--
     amneziawg.dll Building
   -->
-  <Target Name="Dll-x86"
-    Outputs="$(Configuration)\x86\amneziawg.dll"
-    DependsOnTargets="Dll-amd64;Dll-arm64">
-    <MSBuild Projects="setupapihost\setupapihost.vcxproj;api\api.vcxproj" Targets="Build" Properties="Configuration=$(Configuration);Platform=Win32" />
-  </Target>
   <Target Name="Dll-amd64"
     Outputs="$(Configuration)\amd64\amneziawg.dll"
     DependsOnTargets="Dll-arm64">
     <MSBuild Projects="setupapihost\setupapihost.vcxproj;api\api.vcxproj" Targets="Build" Properties="Configuration=$(Configuration);Platform=x64" />
-  </Target>
-  <Target Name="Dll-arm"
-    Outputs="$(Configuration)\arm\amneziawg.dll"
-    DependsOnTargets="Dll-arm64">
-    <MSBuild Projects="setupapihost\setupapihost.vcxproj;api\api.vcxproj" Targets="Build" Properties="Configuration=$(Configuration);Platform=ARM" />
   </Target>
   <Target Name="Dll-arm64"
     Outputs="$(Configuration)\arm64\amneziawg.dll">
@@ -78,7 +58,6 @@
     <ZipFilesSrc Include="api\amneziawg.h"                      /><ZipFilesDst Include="$(ZipIntDir)amneziawg-nt\include\amneziawg.h"     />
     <ZipFilesSrc Include="$(Configuration)\amd64\amneziawg.dll" /><ZipFilesDst Include="$(ZipIntDir)amneziawg-nt\bin\amd64\amneziawg.dll" />
     <ZipFilesSrc Include="$(Configuration)\arm64\amneziawg.dll" /><ZipFilesDst Include="$(ZipIntDir)amneziawg-nt\bin\arm64\amneziawg.dll" />
-    <ZipFilesSrc Include="$(Configuration)\x86\amneziawg.dll"   /><ZipFilesDst Include="$(ZipIntDir)amneziawg-nt\bin\x86\amneziawg.dll"   />
   </ItemGroup>
   <Target Name="Zip"
     Inputs="@(ZipFilesSrc)"
